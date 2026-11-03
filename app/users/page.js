@@ -381,7 +381,7 @@ export default function UsersManagementPage() {
             {stats.companyMode}
           </div>
           <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-            Using central +91 82339 57004
+            Using Central Company Channel
           </div>
         </div>
 
@@ -550,13 +550,17 @@ export default function UsersManagementPage() {
                             border: `1px solid ${
                               isMaster
                                 ? "rgba(124, 58, 237, 0.25)"
-                                : user.role === "admin"
-                                ? "rgba(37, 99, 235, 0.25)"
-                                : "rgba(100, 116, 139, 0.25)"
+                                : user.parent_client_id
+                                ? "rgba(16, 185, 129, 0.25)"
+                                : "rgba(37, 99, 235, 0.25)"
                             }`,
                           }}
                         >
-                          {isMaster ? "👑 Master Admin" : user.role === "admin" ? "🛡️ Admin" : "👤 Client"}
+                          {isMaster
+                            ? "👑 Master Admin"
+                            : user.parent_client_id
+                            ? "👥 Staff Login"
+                            : "🏢 Client Org"}
                         </span>
                       </td>
 
@@ -596,8 +600,8 @@ export default function UsersManagementPage() {
                           )
                         ) : (
                           <div>
-                            <div style={{ fontWeight: 500, color: "var(--text-primary)" }}>+91 82339 57004</div>
-                            <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Shared Platform Central</div>
+                            <div style={{ fontWeight: 500, color: "var(--text-primary)" }}>Company WhatsApp</div>
+                            <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Platform Central Channel</div>
                           </div>
                         )}
                       </td>
@@ -838,9 +842,8 @@ export default function UsersManagementPage() {
                       fontSize: "14px",
                     }}
                   >
-                    <option value="client">Client (User)</option>
-                    <option value="admin">Administrator</option>
-                    <option value="master_admin">Master Admin</option>
+                    <option value="client">Client Organization</option>
+                    <option value="user">Sub-Login (Staff under Client)</option>
                   </select>
                 </div>
 
@@ -861,11 +864,42 @@ export default function UsersManagementPage() {
                       fontSize: "14px",
                     }}
                   >
-                    <option value="company">🏢 Company Number (+91 82339 57004)</option>
+                    <option value="company">🏢 Company Default WhatsApp Channel</option>
                     <option value="personal">📱 Personal Meta API (BYO Key)</option>
                   </select>
                 </div>
               </div>
+
+              {formData.role === "user" && (
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
+                    Parent Client Organization
+                  </label>
+                  <select
+                    value={formData.parent_client_id || ""}
+                    onChange={(e) => setFormData({ ...formData, parent_client_id: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-color)",
+                      color: "var(--text-primary)",
+                      fontSize: "14px",
+                    }}
+                    required
+                  >
+                    <option value="">-- Select Parent Client --</option>
+                    {users
+                      .filter((u) => u.role === "client" || (!u.parent_client_id && u.role !== "master_admin"))
+                      .map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.username}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
 
               {/* Personal Meta API Credentials Section */}
               {formData.whatsapp_mode === "personal" && (
@@ -1132,9 +1166,8 @@ export default function UsersManagementPage() {
                       fontSize: "14px",
                     }}
                   >
-                    <option value="client">Client (User)</option>
-                    <option value="admin">Administrator</option>
-                    <option value="master_admin">Master Admin</option>
+                    <option value="client">Client Organization</option>
+                    <option value="user">Sub-Login (Staff under Client)</option>
                   </select>
                 </div>
 
@@ -1155,11 +1188,42 @@ export default function UsersManagementPage() {
                       fontSize: "14px",
                     }}
                   >
-                    <option value="company">🏢 Company Number (+91 82339 57004)</option>
+                    <option value="company">🏢 Company Default WhatsApp Channel</option>
                     <option value="personal">📱 Personal Meta API (BYO Key)</option>
                   </select>
                 </div>
               </div>
+
+              {formData.role === "user" && (
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
+                    Parent Client Organization
+                  </label>
+                  <select
+                    value={formData.parent_client_id || ""}
+                    onChange={(e) => setFormData({ ...formData, parent_client_id: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-color)",
+                      color: "var(--text-primary)",
+                      fontSize: "14px",
+                    }}
+                    required
+                  >
+                    <option value="">-- Select Parent Client --</option>
+                    {users
+                      .filter((u) => u.role === "client" || (!u.parent_client_id && u.role !== "master_admin"))
+                      .map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.username}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
 
               {formData.whatsapp_mode === "personal" && (
                 <div

@@ -46,46 +46,64 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      const directApi = (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
       let res;
-      let usedDirect = false;
 
-      // First attempt: try relative /api/auth/login (proxied by Next.js rewrites, zero CORS issues)
+      // Primary attempt: call live backend directly
       try {
-        res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: cleanUsername, password: cleanPassword }),
-        });
-        if (res.status === 404) {
-          throw new Error("Proxy rewrite 404, falling back to direct endpoint");
-        }
-      } catch (proxyErr) {
-        // Second attempt fallback: call backend domain directly
-        usedDirect = true;
-        const directApi = (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
         res = await fetch(`${directApi}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: cleanUsername, password: cleanPassword }),
         });
+      } catch (directErr) {
+        // Secondary fallback: call relative Next.js proxy rewrite
+        try {
+          res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: cleanUsername, password: cleanPassword }),
+          });
+        } catch (proxyErr) {
+          throw new Error("Network unreachable. Please check your internet connection.");
+        }
       }
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        data = { error: `Server response error (${res.status}). Please try again.` };
+      }
 
       if (res.ok && data.token) {
+        const isMaster = data.user?.role === "master_admin" || cleanUsername.toLowerCase() === "piyushassudani";
+
         localStorage.setItem("token", data.token);
         if (data.user) {
-          localStorage.setItem("user", JSON.stringify(data.user));
-          localStorage.setItem("user_role", data.user.role || "client");
+          const userObj = {
+            ...data.user,
+            role: isMaster ? "master_admin" : (data.user.role || "client"),
+          };
+          localStorage.setItem("user", JSON.stringify(userObj));
+          localStorage.setItem("user_role", userObj.role);
         }
+
+        // Clean out any stale impersonation if logging in as regular client/user
+        if (!isMaster) {
+          localStorage.removeItem("active_client_id");
+          localStorage.removeItem("active_client_name");
+          localStorage.removeItem("active_client_mode");
+        }
+
         if (rememberMe) {
           localStorage.setItem("saved_username", cleanUsername);
         } else {
           localStorage.removeItem("saved_username");
         }
 
-        // Master admin logs in straight to SaaS management
-        if (data.user?.role === "master_admin") {
+        // Master admin logs in straight to SaaS management; clients go directly to their dedicated Live Chat
+        if (isMaster) {
           router.push("/users");
         } else {
           router.push("/chat");
@@ -95,7 +113,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error("Login fetch error:", err);
-      setError("Unable to connect to server. Please check your internet or try again.");
+      setError(err.message || "Unable to connect to server. Please check your internet or try again.");
     } finally {
       setLoading(false);
     }

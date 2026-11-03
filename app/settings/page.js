@@ -21,8 +21,19 @@ import {
   ExternalLink,
   Sliders,
   Cpu,
+  Users,
+  UserPlus,
+  Trash2,
 } from "lucide-react";
-import api, { getAccountHealth, getChannelConfig, saveChannelConfig, testMetaCredentials } from "../lib/api";
+import api, {
+  getAccountHealth,
+  getChannelConfig,
+  saveChannelConfig,
+  testMetaCredentials,
+  getTeamMembers,
+  createTeamMember,
+  deleteTeamMember,
+} from "../lib/api";
 import { useToast } from "../components/ToastProvider";
 
 const getTierDescription = (tier) => {
@@ -82,6 +93,61 @@ export default function SettingsPage() {
   const [testingChannel, setTestingChannel] = useState(false);
   const [channelTestResult, setChannelTestResult] = useState(null);
   const [savingChannel, setSavingChannel] = useState(false);
+
+  // Team Members & Sub-Logins State
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [newTeamUsername, setNewTeamUsername] = useState("");
+  const [newTeamPassword, setNewTeamPassword] = useState("");
+  const [addingTeamMember, setAddingTeamMember] = useState(false);
+
+  const loadTeam = () => {
+    setTeamLoading(true);
+    getTeamMembers()
+      .then((res) => setTeamMembers(res.data.team || []))
+      .catch((err) => console.warn("Load team err:", err.message))
+      .finally(() => setTeamLoading(false));
+  };
+
+  useEffect(() => {
+    if (activeTab === "team") {
+      loadTeam();
+    }
+  }, [activeTab]);
+
+  const handleAddTeamMember = async (e) => {
+    e.preventDefault();
+    if (!newTeamUsername.trim() || !newTeamPassword.trim()) {
+      showError("Please enter both username and password.");
+      return;
+    }
+    setAddingTeamMember(true);
+    try {
+      const res = await createTeamMember({
+        username: newTeamUsername.trim(),
+        password: newTeamPassword.trim(),
+      });
+      showSuccess(res.data.message || "Team member login created successfully!");
+      setNewTeamUsername("");
+      setNewTeamPassword("");
+      loadTeam();
+    } catch (err) {
+      showError(err.response?.data?.error || "Failed to create team member.");
+    } finally {
+      setAddingTeamMember(false);
+    }
+  };
+
+  const handleDeleteTeamMember = async (id, uname) => {
+    if (!window.confirm(`Are you sure you want to delete login "${uname}"?`)) return;
+    try {
+      await deleteTeamMember(id);
+      showSuccess(`Login "${uname}" removed.`);
+      loadTeam();
+    } catch (err) {
+      showError(err.response?.data?.error || "Failed to delete team member.");
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -261,6 +327,7 @@ export default function SettingsPage() {
         {[
           { id: "account", label: "Meta Cloud Account", icon: Smartphone },
           { id: "channel", label: "Sender Channel (Dual Mode)", icon: Sliders },
+          { id: "team", label: "Team Logins", icon: Users },
           { id: "credentials", label: "Admin Credentials", icon: UserCog },
           { id: "webhook", label: "Webhook & API Endpoints", icon: Webhook },
           { id: "system", label: "System Information", icon: Cpu },
@@ -450,10 +517,12 @@ export default function SettingsPage() {
                   </h3>
                 </div>
                 <p style={{ margin: "4px 0 12px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                  Use the central verified platform number (+91 82339 57004). Fully managed, zero setup required.
+                  {channelData?.company?.phone_number
+                    ? `Use the central verified platform number (${channelData.company.phone_number}). Fully managed, zero setup required.`
+                    : "Use the central verified platform WhatsApp channel. Fully managed, zero setup required."}
                 </p>
                 <div style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", background: "rgba(5, 150, 105, 0.1)", color: "#059669", fontSize: "11px", fontWeight: 600 }}>
-                  Active Platform Shared Number
+                  {channelData?.company?.phone_number ? `Verified: ${channelData.company.phone_number}` : "Active Platform Shared Channel"}
                 </div>
               </div>
 
@@ -632,6 +701,164 @@ export default function SettingsPage() {
               >
                 {savingChannel ? "Saving..." : "Save & Activate Channel"}
               </button>
+            </div>
+          </section>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: TEAM LOGINS & SUB-ACCOUNTS */}
+        {/* ========================================================= */}
+        {activeTab === "team" && (
+          <section className="ui-card animate-fade-in" style={{ transform: "none" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
+              <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
+                <Users size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: "17px", fontWeight: "700", color: "var(--text-primary)", margin: 0 }}>
+                  Team Members &amp; Sub-Logins
+                </h2>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "2px 0 0" }}>
+                  Create separate login credentials for staff members to access this client workspace
+                </p>
+              </div>
+            </div>
+
+            {/* Create new sub-login */}
+            <form onSubmit={handleAddTeamMember} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "18px", marginBottom: "24px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 14px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+                <UserPlus size={16} color="var(--accent)" />
+                Add New Team Login
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", alignItems: "flex-end" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                    Staff Username
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamUsername}
+                    onChange={(e) => setNewTeamUsername(e.target.value)}
+                    placeholder="e.g. staff_rahul"
+                    className="form-input"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", fontSize: "13.5px" }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                    Login Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newTeamPassword}
+                    onChange={(e) => setNewTeamPassword(e.target.value)}
+                    placeholder="Min 4 characters"
+                    className="form-input"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", fontSize: "13.5px" }}
+                    required
+                  />
+                </div>
+                <div>
+                  <button
+                    type="submit"
+                    disabled={addingTeamMember}
+                    className="btn-primary"
+                    style={{ width: "100%", padding: "10px 16px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "13.5px", fontWeight: 600 }}
+                  >
+                    <UserPlus size={15} />
+                    {addingTeamMember ? "Creating..." : "Create Login"}
+                  </button>
+                </div>
+              </div>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "10px 0 0", lineHeight: 1.4 }}>
+                💡 Team members log in with these credentials. They share your active WhatsApp sending channel, live chats, and campaign assets.
+              </p>
+            </form>
+
+            {/* List of active team logins */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+                  Active Team Logins ({teamMembers.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={loadTeam}
+                  disabled={teamLoading}
+                  style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "12px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <RefreshCw size={12} className={teamLoading ? "animate-spin" : ""} />
+                  Refresh
+                </button>
+              </div>
+
+              {teamLoading && teamMembers.length === 0 ? (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                  Loading team logins...
+                </div>
+              ) : teamMembers.length === 0 ? (
+                <div style={{ padding: "32px", textAlign: "center", background: "var(--bg-secondary)", borderRadius: "12px", border: "1px dashed var(--border-color)" }}>
+                  <Users size={32} color="var(--text-muted)" style={{ margin: "0 auto 8px", opacity: 0.5 }} />
+                  <p style={{ margin: "0 0 4px", fontSize: "13.5px", fontWeight: 600, color: "var(--text-primary)" }}>
+                    No Sub-Logins Yet
+                  </p>
+                  <p style={{ margin: 0, fontSize: "12px", color: "var(--text-muted)" }}>
+                    Add staff members using the form above to let multiple people work on this account.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {teamMembers.map((m) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border-color)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(16, 185, 129, 0.12)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "13px" }}>
+                          {m.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text-primary)" }}>
+                            {m.username}
+                          </div>
+                          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                            Role: Staff Member • Created: {new Date(m.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTeamMember(m.id, m.username)}
+                        title="Delete team login"
+                        style={{
+                          background: "rgba(239, 68, 68, 0.08)",
+                          border: "1px solid rgba(239, 68, 68, 0.2)",
+                          color: "#ef4444",
+                          borderRadius: "6px",
+                          padding: "6px 10px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        <Trash2 size={13} />
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         )}

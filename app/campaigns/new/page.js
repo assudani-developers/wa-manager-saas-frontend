@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Megaphone, ArrowLeft, X, Image as ImageIcon, FolderOpen, Upload } from "lucide-react";
+import { Megaphone, ArrowLeft, X, Image as ImageIcon, FolderOpen, Upload, Calendar, Clock, Send } from "lucide-react";
 import api, { normalizeMediaUrl } from "../../lib/api";
 import { useToast } from "../../components/ToastProvider";
 import MediaPickerModal from "../../components/MediaPickerModal";
@@ -29,6 +29,11 @@ export default function NewCampaignPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeChannel, setActiveChannel] = useState(null);
+
+  // Scheduling states
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -121,6 +126,10 @@ export default function NewCampaignPage() {
       formData.append("template_name", templateName.trim());
       formData.append("language_code", languageCode);
       formData.append("contact_list_ids", JSON.stringify(selectedListIds));
+      if (isScheduled && scheduleDate && scheduleTime) {
+        const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+        formData.append("scheduled_at", scheduledDateTime.toISOString());
+      }
       if (requiresMediaHeader) {
         if (mediaFile) {
           formData.append("mediaFile", mediaFile);
@@ -209,7 +218,7 @@ export default function NewCampaignPage() {
                   <span style={{ color: activeChannel.active_mode === "personal" ? "#7c3aed" : "#2563eb", fontWeight: 700 }}>
                     {activeChannel.active_mode === "personal"
                       ? `Personal Meta API (${activeChannel.personal?.display_phone_number || activeChannel.personal?.verified_name || "Custom Number"})`
-                      : "Company WhatsApp Central (+91 82339 57004)"}
+                      : (activeChannel.company?.phone_number ? `Company WhatsApp Central (${activeChannel.company.phone_number})` : "Company WhatsApp Central Channel")}
                   </span>
                 </div>
                 <Link href="/settings" style={{ fontSize: "12px", color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
@@ -413,21 +422,124 @@ export default function NewCampaignPage() {
               )}
             </div>
 
-            <div style={{ display: "flex", gap: "16px", marginTop: "40px" }}>
+            {/* Delivery Timing & Scheduling */}
+            <div style={{ marginTop: "28px", padding: "18px", borderRadius: "12px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                <Clock size={18} color="var(--accent)" />
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Delivery Timing &amp; Dispatch
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsScheduled(false)}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: `2px solid ${!isScheduled ? "var(--accent)" : "var(--border-color)"}`,
+                    background: !isScheduled ? "rgba(0, 34, 119, 0.08)" : "var(--bg-secondary)",
+                    color: !isScheduled ? "var(--accent)" : "var(--text-muted)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Send size={15} />
+                  Send Immediately
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsScheduled(true)}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: `2px solid ${isScheduled ? "#7c3aed" : "var(--border-color)"}`,
+                    background: isScheduled ? "rgba(124, 58, 237, 0.08)" : "var(--bg-secondary)",
+                    color: isScheduled ? "#7c3aed" : "var(--text-muted)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Calendar size={15} />
+                  Schedule for Later
+                </button>
+              </div>
+
+              {isScheduled && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: "var(--text-primary)" }}>
+                      Dispatch Date
+                    </label>
+                    <input
+                      type="date"
+                      required={isScheduled}
+                      value={scheduleDate}
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border-color)",
+                        color: "var(--text-primary)",
+                        fontSize: "13px",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: "var(--text-primary)" }}>
+                      Dispatch Time
+                    </label>
+                    <input
+                      type="time"
+                      required={isScheduled}
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border-color)",
+                        color: "var(--text-primary)",
+                        fontSize: "13px",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: "16px", marginTop: "32px" }}>
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={submitting || !name.trim() || !templateName.trim() || selectedListIds.length === 0}
+                disabled={submitting || !name.trim() || !templateName.trim() || selectedListIds.length === 0 || (isScheduled && (!scheduleDate || !scheduleTime))}
               >
                 {submitting ? (
                   <>
                     <div className="loading-spinner" style={{ width: "18px", height: "18px", borderWidth: "3px" }} />
-                    Starting...
+                    {isScheduled ? "Scheduling..." : "Starting..."}
                   </>
                 ) : (
                   <>
-                    <Megaphone size={18} />
-                    Launch Campaign
+                    {isScheduled ? <Calendar size={18} /> : <Megaphone size={18} />}
+                    {isScheduled ? "Schedule Campaign" : "Launch Campaign"}
                   </>
                 )}
               </button>

@@ -2,10 +2,7 @@ import axios from "axios";
 
 // When running in the browser, prefer same-origin relative URL so Next.js rewrites handle requests with zero CORS issues
 const getBaseUrl = () => {
-  if (typeof window !== "undefined") {
-    return process.env.NEXT_PUBLIC_API_URL || "";
-  }
-  return process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in";
+  return (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
 };
 
 const API_URL = getBaseUrl();
@@ -55,6 +52,11 @@ export const getContact = (id) => api.get(`/api/contacts/${id}`);
 export const getAccountHealth = () => api.get("/api/account-health");
 
 export const getContactLists = () => api.get("/api/contact_lists");
+
+// Client Team Members / Sub-logins
+export const getTeamMembers = () => api.get("/api/users/team");
+export const createTeamMember = (data) => api.post("/api/users/team", data);
+export const deleteTeamMember = (id) => api.delete(`/api/users/team/${id}`);
 
 // SaaS User Management & Dual Channel APIs
 export const getUsers = () => api.get("/api/users");

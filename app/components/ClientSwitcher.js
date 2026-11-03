@@ -24,8 +24,9 @@ export default function ClientSwitcher() {
       const role = localStorage.getItem("user_role");
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
-      const userIsAdmin = role === "master_admin" || role === "admin" || user?.role === "master_admin" || user?.role === "admin";
-      setIsAdmin(userIsAdmin);
+      // ONLY Master Admin (piyushassudani) can switch clients
+      const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
+      setIsAdmin(isMaster);
 
       const savedClientId = localStorage.getItem("active_client_id");
       const savedClientName = localStorage.getItem("active_client_name");
@@ -34,7 +35,7 @@ export default function ClientSwitcher() {
       setActiveClientName(savedClientName);
       setActiveClientMode(savedClientMode);
 
-      if (userIsAdmin) {
+      if (isMaster) {
         setLoading(true);
         getClientsDropdown()
           .then((res) => {
@@ -394,7 +395,7 @@ export default function ClientSwitcher() {
                                 </span>
                               </div>
                               <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                                {client.meta_display_phone_number || (isPersonal ? "Custom API" : "+91 82339 57004")}
+                                {client.meta_display_phone_number || (isPersonal ? "Custom API" : "Company Channel")}
                               </div>
                             </div>
                             <ArrowRight size={13} color="var(--text-muted)" />

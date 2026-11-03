@@ -29,9 +29,9 @@ export default function SidebarNav() {
     try {
       const role = localStorage.getItem("user_role");
       const userStr = localStorage.getItem("user");
-      if (role === "master_admin" || (userStr && JSON.parse(userStr)?.role === "master_admin")) {
-        setIsMasterAdmin(true);
-      }
+      const user = userStr ? JSON.parse(userStr) : null;
+      const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
+      setIsMasterAdmin(isMaster);
     } catch (e) {}
   }, [pathname]);
 

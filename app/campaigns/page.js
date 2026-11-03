@@ -110,6 +110,21 @@ export default function CampaignsPage() {
                 <div className="ui-card-header">
                   <h3 className="ui-card-title">{campaign.name}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {campaign.status === "scheduled" && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          padding: "2px 8px",
+                          borderRadius: "10px",
+                          background: "rgba(124, 58, 237, 0.12)",
+                          color: "#7c3aed",
+                          fontWeight: 700,
+                          border: "1px solid rgba(124, 58, 237, 0.25)",
+                        }}
+                      >
+                        📅 Scheduled
+                      </span>
+                    )}
                     <div className="ui-card-badge">
                       {campaign.created_at ? format(new Date(campaign.created_at), "MMM d, yyyy") : ""}
                     </div>
@@ -127,6 +142,13 @@ export default function CampaignsPage() {
                   <Megaphone size={16} /> 
                   Template: <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{campaign.template_name}</span>
                 </div>
+
+                {campaign.status === "scheduled" && campaign.scheduled_at && (
+                  <div style={{ marginTop: '8px', padding: '6px 10px', background: 'rgba(124, 58, 237, 0.08)', borderRadius: '8px', fontSize: '12px', color: '#7c3aed', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⏰ Auto-dispatch at:</span>
+                    <span>{format(new Date(campaign.scheduled_at), "MMM d, yyyy 'at' h:mm a")}</span>
+                  </div>
+                )}
 
                 <div className="campaign-stats" style={{ flex: 1 }}>
                   <div className="campaign-stat">
