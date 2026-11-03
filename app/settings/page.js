@@ -296,7 +296,7 @@ export default function SettingsPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "10px" }}>
                     <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>WhatsApp Phone Number</span>
                     <span style={{ fontSize: "13.5px", fontWeight: "600", color: "var(--accent)" }}>
-                      {metaHealth?.display_phone_number || "+91 91637 53249"}
+                      {metaHealth?.display_phone_number || "Meta Connected"}
                     </span>
                   </div>
 
