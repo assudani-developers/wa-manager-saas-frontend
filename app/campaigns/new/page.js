@@ -28,6 +28,7 @@ export default function NewCampaignPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [activeChannel, setActiveChannel] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,9 +39,12 @@ export default function NewCampaignPage() {
         ]);
         setContactLists(listsRes.data);
         
-        
         const approvedOnly = (templatesRes.data || []).filter(t => t.status === 'APPROVED');
         setTemplates(approvedOnly);
+
+        api.get("/api/users/channel-config")
+          .then((res) => setActiveChannel(res.data))
+          .catch(() => {});
       } catch (err) {
         console.error("Failed to fetch data:", err);
         setError("Failed to load required data. Please refresh and try again.");
@@ -182,6 +186,35 @@ export default function NewCampaignPage() {
             {success && (
               <div style={{ padding: "16px", background: "var(--bubble-outbound)", border: "1px solid var(--secondary-accent-muted)", borderRadius: "12px", marginBottom: "24px", color: "var(--secondary-accent)", fontSize: "15px", fontWeight: "600" }}>
                 ✅ {success}
+              </div>
+            )}
+
+            {/* Active Channel Indicator */}
+            {activeChannel && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 16px",
+                  borderRadius: "10px",
+                  background: activeChannel.active_mode === "personal" ? "rgba(124, 58, 237, 0.08)" : "rgba(37, 99, 235, 0.08)",
+                  border: `1px solid ${activeChannel.active_mode === "personal" ? "rgba(124, 58, 237, 0.2)" : "rgba(37, 99, 235, 0.2)"}`,
+                  marginBottom: "20px",
+                  fontSize: "13px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>Active Sender Channel:</span>
+                  <span style={{ color: activeChannel.active_mode === "personal" ? "#7c3aed" : "#2563eb", fontWeight: 700 }}>
+                    {activeChannel.active_mode === "personal"
+                      ? `Personal Meta API (${activeChannel.personal?.display_phone_number || activeChannel.personal?.verified_name || "Custom Number"})`
+                      : "Company WhatsApp Central (+91 82339 57004)"}
+                  </span>
+                </div>
+                <Link href="/settings" style={{ fontSize: "12px", color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
+                  Switch Channel →
+                </Link>
               </div>
             )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -14,6 +14,7 @@ import {
   LayoutTemplate,
   LogOut,
   LayoutDashboard,
+  ShieldCheck,
 } from "lucide-react";
 import AccountHealthModal from "./AccountHealthModal";
 import BrandLogo from "./BrandLogo";
@@ -22,12 +23,24 @@ export default function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+
+  useEffect(() => {
+    try {
+      const role = localStorage.getItem("user_role");
+      const userStr = localStorage.getItem("user");
+      if (role === "master_admin" || (userStr && JSON.parse(userStr)?.role === "master_admin")) {
+        setIsMasterAdmin(true);
+      }
+    } catch (e) {}
+  }, [pathname]);
 
   if (pathname === "/login") {
     return null;
   }
 
   const navItems = [
+    ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "Client Users (SaaS)" }] : []),
     { href: "/chat", icon: MessageCircle, label: "Live Chat" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Analytics" },
     // { href: "/replies", icon: Reply, label: "All Replies" }, // Hidden per request (code preserved)
@@ -38,6 +51,7 @@ export default function SidebarNav() {
   ];
 
   const mobileNavItems = [
+    ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "SaaS" }] : []),
     { href: "/chat", icon: MessageCircle, label: "Chat" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Stats" },
     { href: "/contacts", icon: Users, label: "Contacts" },

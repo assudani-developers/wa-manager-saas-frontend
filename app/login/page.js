@@ -16,8 +16,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const userRole = typeof window !== "undefined" ? localStorage.getItem("user_role") : null;
     if (token) {
-      router.push("/chat");
+      if (userRole === "master_admin") {
+        router.push("/users");
+      } else {
+        router.push("/chat");
+      }
     }
     const savedUser = typeof window !== "undefined" ? localStorage.getItem("saved_username") : null;
     if (savedUser) {
@@ -40,25 +45,51 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
-
     try {
-      const res = await fetch(`${apiUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: cleanUsername, password: cleanPassword }),
-      });
+      let res;
+      let usedDirect = false;
+
+      // First attempt: try relative /api/auth/login (proxied by Next.js rewrites, zero CORS issues)
+      try {
+        res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: cleanUsername, password: cleanPassword }),
+        });
+        if (res.status === 404) {
+          throw new Error("Proxy rewrite 404, falling back to direct endpoint");
+        }
+      } catch (proxyErr) {
+        // Second attempt fallback: call backend domain directly
+        usedDirect = true;
+        const directApi = (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
+        res = await fetch(`${directApi}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: cleanUsername, password: cleanPassword }),
+        });
+      }
 
       const data = await res.json();
 
       if (res.ok && data.token) {
         localStorage.setItem("token", data.token);
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+          localStorage.setItem("user_role", data.user.role || "client");
+        }
         if (rememberMe) {
           localStorage.setItem("saved_username", cleanUsername);
         } else {
           localStorage.removeItem("saved_username");
         }
-        router.push("/chat");
+
+        // Master admin logs in straight to SaaS management
+        if (data.user?.role === "master_admin") {
+          router.push("/users");
+        } else {
+          router.push("/chat");
+        }
       } else {
         setError(data.error || "Invalid username or password. Please verify credentials.");
       }

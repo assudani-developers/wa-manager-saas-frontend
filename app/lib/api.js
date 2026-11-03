@@ -1,6 +1,14 @@
 import axios from "axios";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
+// When running in the browser, prefer same-origin relative URL so Next.js rewrites handle requests with zero CORS issues
+const getBaseUrl = () => {
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_API_URL || "";
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in";
+};
+
+const API_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: API_URL,
@@ -10,7 +18,7 @@ const api = axios.create({
   },
 });
 
-// Automatically attach Bearer token to all outbound API requests
+// Automatically attach Bearer token and optional multi-tenant x-client-id to all outbound API requests
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
@@ -18,19 +26,19 @@ api.interceptors.request.use(
       if (token && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      const activeClientId = localStorage.getItem("active_client_id");
+      if (activeClientId) {
+        config.headers["x-client-id"] = activeClientId;
+      }
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-
-
-
-
 export const normalizeMediaUrl = (url) => {
   if (!url || typeof url !== "string") return url;
-  const cleanApiUrl = API_URL.replace(/\/+$/, "");
+  const cleanApiUrl = (API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
   if (url.startsWith("/uploads")) {
     return `${cleanApiUrl}${url}`;
   }
@@ -47,6 +55,24 @@ export const getContact = (id) => api.get(`/api/contacts/${id}`);
 export const getAccountHealth = () => api.get("/api/account-health");
 
 export const getContactLists = () => api.get("/api/contact_lists");
+
+// SaaS User Management & Dual Channel APIs
+export const getUsers = () => api.get("/api/users");
+
+export const getClientsDropdown = () => api.get("/api/users/clients-dropdown");
+
+export const createUser = (data) => api.post("/api/users", data);
+
+export const updateUser = (id, data) => api.put(`/api/users/${id}`, data);
+
+export const deleteUser = (id) => api.delete(`/api/users/${id}`);
+
+export const getChannelConfig = () => api.get("/api/users/channel-config");
+
+export const saveChannelConfig = (data) => api.post("/api/users/channel-config", data);
+
+export const testMetaCredentials = (data) => api.post("/api/users/test-meta", data);
+
 
 export const getListContacts = (id) => api.get(`/api/contact_lists/${id}/contacts`);
 

@@ -2,6 +2,7 @@ import "./globals.css";
 import SidebarNav from "./components/SidebarNav";
 import AuthGuard from "./components/AuthGuard";
 import AppFooter from "./components/AppFooter";
+import ClientSwitcher from "./components/ClientSwitcher";
 import { ToastProvider } from "./components/ToastProvider";
 
 export const metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
           <div className="app-layout" style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
             <SidebarNav />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              <ClientSwitcher />
               <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                 <AuthGuard>
                   {children}

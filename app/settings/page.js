@@ -22,7 +22,7 @@ import {
   Sliders,
   Cpu,
 } from "lucide-react";
-import api, { getAccountHealth } from "../lib/api";
+import api, { getAccountHealth, getChannelConfig, saveChannelConfig, testMetaCredentials } from "../lib/api";
 import { useToast } from "../components/ToastProvider";
 
 const getTierDescription = (tier) => {
@@ -72,6 +72,17 @@ export default function SettingsPage() {
 
   const [copiedKey, setCopiedKey] = useState(null);
 
+  // Dual Sender Channel State
+  const [channelMode, setChannelMode] = useState("company");
+  const [channelData, setChannelData] = useState(null);
+  const [personalPhoneId, setPersonalPhoneId] = useState("");
+  const [personalWabaId, setPersonalWabaId] = useState("");
+  const [personalToken, setPersonalToken] = useState("");
+  const [showPersonalToken, setShowPersonalToken] = useState(false);
+  const [testingChannel, setTestingChannel] = useState(false);
+  const [channelTestResult, setChannelTestResult] = useState(null);
+  const [savingChannel, setSavingChannel] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -88,10 +99,88 @@ export default function SettingsPage() {
         if (isMounted) setHealthLoading(false);
       });
 
+    getChannelConfig()
+      .then((res) => {
+        if (isMounted && res.data) {
+          setChannelData(res.data);
+          setChannelMode(res.data.active_mode || "company");
+          if (res.data.personal) {
+            setPersonalPhoneId(res.data.personal.phone_id || "");
+            setPersonalWabaId(res.data.personal.waba_id || "");
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load channel settings:", err.message);
+      });
+
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const handleTestPersonalMeta = async () => {
+    if (!personalPhoneId.trim() || !personalToken.trim()) {
+      showError("Please enter both Phone Number ID and Access Token to test.");
+      return;
+    }
+
+    setTestingChannel(true);
+    setChannelTestResult(null);
+
+    try {
+      const res = await testMetaCredentials({
+        phone_number_id: personalPhoneId.trim(),
+        access_token: personalToken.trim(),
+      });
+
+      if (res.data?.success) {
+        setChannelTestResult({
+          success: true,
+          message: `Verified: ${res.data.data?.verified_name || "Active"} (${res.data.data?.display_phone_number || "Meta OK"})`,
+        });
+        showSuccess("Personal Meta credentials verified successfully!");
+      } else {
+        setChannelTestResult({
+          success: false,
+          message: res.data?.error || "Verification failed.",
+        });
+        showError(res.data?.error || "Verification failed.");
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message;
+      setChannelTestResult({ success: false, message: msg });
+      showError(`Meta validation error: ${msg}`);
+    } finally {
+      setTestingChannel(false);
+    }
+  };
+
+  const handleSaveChannel = async () => {
+    setSavingChannel(true);
+    try {
+      const payload = {
+        mode: channelMode,
+        meta_phone_number_id: personalPhoneId.trim() || null,
+        meta_waba_id: personalWabaId.trim() || null,
+      };
+
+      if (personalToken.trim()) {
+        payload.meta_access_token = personalToken.trim();
+      }
+
+      const res = await saveChannelConfig(payload);
+      showSuccess(res.data?.message || "WhatsApp channel updated successfully!");
+
+      const refreshed = await getChannelConfig();
+      setChannelData(refreshed.data);
+      setChannelMode(refreshed.data.active_mode || "company");
+    } catch (err) {
+      showError(err.response?.data?.error || "Failed to update channel.");
+    } finally {
+      setSavingChannel(false);
+    }
+  };
 
   const refreshMetaHealth = async () => {
     setHealthLoading(true);
@@ -171,6 +260,7 @@ export default function SettingsPage() {
       >
         {[
           { id: "account", label: "Meta Cloud Account", icon: Smartphone },
+          { id: "channel", label: "Sender Channel (Dual Mode)", icon: Sliders },
           { id: "credentials", label: "Admin Credentials", icon: UserCog },
           { id: "webhook", label: "Webhook & API Endpoints", icon: Webhook },
           { id: "system", label: "System Information", icon: Cpu },
@@ -309,6 +399,240 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: SENDER CHANNEL & DUAL META API MODE */}
+        {/* ========================================================= */}
+        {activeTab === "channel" && (
+          <section className="ui-card animate-fade-in" style={{ transform: "none" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
+              <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(37, 99, 235, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
+                <Sliders size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: "17px", fontWeight: "700", color: "var(--text-primary)", margin: 0 }}>
+                  WhatsApp Sending Channel
+                </h2>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "2px 0 0" }}>
+                  Select whether to send messages via the central Company Number or your own Personal Meta Cloud API
+                </p>
+              </div>
+            </div>
+
+            {/* Mode Selection Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+              {/* Option 1: Company Number */}
+              <div
+                onClick={() => setChannelMode("company")}
+                style={{
+                  padding: "18px",
+                  borderRadius: "12px",
+                  border: `2px solid ${channelMode === "company" ? "#2563eb" : "var(--border-color)"}`,
+                  background: channelMode === "company" ? "rgba(37, 99, 235, 0.04)" : "var(--bg-secondary)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  position: "relative",
+                }}
+              >
+                {channelMode === "company" && (
+                  <div style={{ position: "absolute", top: "12px", right: "12px", color: "#2563eb" }}>
+                    <CheckCircle2 size={18} />
+                  </div>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(5, 150, 105, 0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669" }}>
+                    <Smartphone size={18} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Company WhatsApp Number
+                  </h3>
+                </div>
+                <p style={{ margin: "4px 0 12px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.4 }}>
+                  Use the central verified platform number (+91 82339 57004). Fully managed, zero setup required.
+                </p>
+                <div style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", background: "rgba(5, 150, 105, 0.1)", color: "#059669", fontSize: "11px", fontWeight: 600 }}>
+                  Active Platform Shared Number
+                </div>
+              </div>
+
+              {/* Option 2: Personal Meta API */}
+              <div
+                onClick={() => setChannelMode("personal")}
+                style={{
+                  padding: "18px",
+                  borderRadius: "12px",
+                  border: `2px solid ${channelMode === "personal" ? "#7c3aed" : "var(--border-color)"}`,
+                  background: channelMode === "personal" ? "rgba(124, 58, 237, 0.04)" : "var(--bg-secondary)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  position: "relative",
+                }}
+              >
+                {channelMode === "personal" && (
+                  <div style={{ position: "absolute", top: "12px", right: "12px", color: "#7c3aed" }}>
+                    <CheckCircle2 size={18} />
+                  </div>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(124, 58, 237, 0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#7c3aed" }}>
+                    <Cpu size={18} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Personal Meta Cloud API
+                  </h3>
+                </div>
+                <p style={{ margin: "4px 0 12px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.4 }}>
+                  Connect your own WhatsApp Business Cloud account credentials to send from your branded number.
+                </p>
+                <div style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", background: "rgba(124, 58, 237, 0.1)", color: "#7c3aed", fontSize: "11px", fontWeight: 600 }}>
+                  Bring Your Own Meta API Key
+                </div>
+              </div>
+            </div>
+
+            {/* Personal Mode Configuration Fields */}
+            {channelMode === "personal" && (
+              <div style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
+                <h4 style={{ margin: "0 0 16px", fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Personal Meta Cloud Credentials
+                </h4>
+
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
+                    WhatsApp Phone Number ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1404154399449473"
+                    value={personalPhoneId}
+                    onChange={(e) => setPersonalPhoneId(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      background: "var(--bg-secondary)",
+                      border: "1px solid var(--border-color)",
+                      color: "var(--text-primary)",
+                      fontSize: "13.5px",
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
+                    WhatsApp Business Account ID (WABA ID)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1915831806460496"
+                    value={personalWabaId}
+                    onChange={(e) => setPersonalWabaId(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      background: "var(--bg-secondary)",
+                      border: "1px solid var(--border-color)",
+                      color: "var(--text-primary)",
+                      fontSize: "13.5px",
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
+                    Permanent System User Access Token
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showPersonalToken ? "text" : "password"}
+                      placeholder="Paste your Meta System User Access Token (EAAV...)"
+                      value={personalToken}
+                      onChange={(e) => setPersonalToken(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 40px 10px 12px",
+                        borderRadius: "8px",
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border-color)",
+                        color: "var(--text-primary)",
+                        fontSize: "13.5px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPersonalToken(!showPersonalToken)}
+                      style={{
+                        position: "absolute",
+                        right: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "var(--text-muted)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {showPersonalToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={handleTestPersonalMeta}
+                    disabled={testingChannel}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: "8px",
+                      background: "rgba(124, 58, 237, 0.15)",
+                      border: "1px solid rgba(124, 58, 237, 0.3)",
+                      color: "#7c3aed",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <RefreshCw size={14} className={testingChannel ? "spin-animation" : ""} />
+                    {testingChannel ? "Verifying with Meta..." : "Test Connection"}
+                  </button>
+
+                  {channelTestResult && (
+                    <div style={{ fontSize: "13px", color: channelTestResult.success ? "#059669" : "#dc2626", fontWeight: 600 }}>
+                      {channelTestResult.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Save Button */}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={handleSaveChannel}
+                disabled={savingChannel}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: "8px",
+                  background: "linear-gradient(135deg, #002277 0%, #1e40af 100%)",
+                  border: "none",
+                  color: "#ffffff",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(0, 34, 119, 0.25)",
+                }}
+              >
+                {savingChannel ? "Saving..." : "Save & Activate Channel"}
+              </button>
+            </div>
           </section>
         )}
 
