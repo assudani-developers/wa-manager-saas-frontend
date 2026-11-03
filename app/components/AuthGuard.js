@@ -9,8 +9,8 @@ export default function AuthGuard({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    // We don't want to run the check on the login page itself
-    if (pathname === "/login") {
+    // We don't want to run the check on login or public privacy page
+    if (pathname === "/login" || pathname === "/privacy") {
       setIsAuthorized(true);
       return;
     }
@@ -24,8 +24,7 @@ export default function AuthGuard({ children }) {
   }, [pathname, router]);
 
   // Don't render children until we've verified auth status
-  // For login page, we always render immediately
-  if (!isAuthorized && pathname !== "/login") {
+  if (!isAuthorized && pathname !== "/login" && pathname !== "/privacy") {
     return null; 
   }
 
