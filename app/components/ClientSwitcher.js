@@ -49,7 +49,7 @@ export default function ClientSwitcher() {
     } catch (e) {}
   }, [pathname]);
 
-  if (!isAdmin || pathname === "/login") {
+  if (!isAdmin || pathname === "/login" || (pathname === "/users" && !activeClientId)) {
     return null;
   }
 

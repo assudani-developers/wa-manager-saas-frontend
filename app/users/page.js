@@ -22,6 +22,11 @@ import {
   Eye,
   EyeOff,
   X,
+  Layers,
+  Check,
+  Sparkles,
+  ArrowRight,
+  UserCheck,
 } from "lucide-react";
 import api, { getUsers, createUser, updateUser, deleteUser, testMetaCredentials } from "../lib/api";
 import { useToast } from "../components/ToastProvider";
@@ -34,6 +39,7 @@ export default function UsersManagementPage() {
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -45,6 +51,7 @@ export default function UsersManagementPage() {
     username: "",
     password: "",
     role: "client",
+    parent_client_id: "",
     whatsapp_mode: "company",
     meta_phone_number_id: "",
     meta_waba_id: "",
@@ -71,6 +78,11 @@ export default function UsersManagementPage() {
       try {
         const u = JSON.parse(userJson);
         setCurrentUser(u);
+        const isMaster = role === "master_admin" || u?.role === "master_admin" || u?.username?.toLowerCase() === "piyushassudani";
+        if (!isMaster) {
+          router.push("/chat");
+          return;
+        }
       } catch (e) {}
     }
 
@@ -99,6 +111,7 @@ export default function UsersManagementPage() {
       username: "",
       password: "",
       role: "client",
+      parent_client_id: "",
       whatsapp_mode: "company",
       meta_phone_number_id: "",
       meta_waba_id: "",
@@ -117,12 +130,13 @@ export default function UsersManagementPage() {
     setEditingUser(user);
     setFormData({
       username: user.username,
-      password: "", // Leave blank if not changing
+      password: "",
       role: user.role || "client",
+      parent_client_id: user.parent_client_id || "",
       whatsapp_mode: user.whatsapp_mode || "company",
       meta_phone_number_id: user.meta_phone_number_id || "",
       meta_waba_id: user.meta_waba_id || "",
-      meta_access_token: "", // Don't expose token
+      meta_access_token: "",
     });
     setMetaTestResult(null);
     setIsEditModalOpen(true);
@@ -165,15 +179,26 @@ export default function UsersManagementPage() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+
     if (!formData.username.trim() || !formData.password.trim()) {
       showError("Username and password are required.");
+      return;
+    }
+
+    if (formData.password.length < 4) {
+      showError("Password must be at least 4 characters long.");
+      return;
+    }
+
+    if (formData.role === "user" && !formData.parent_client_id) {
+      showError("Please select a parent client organization for this staff sub-login.");
       return;
     }
 
     setSubmitting(true);
     try {
       await createUser(formData);
-      showSuccess(`User "${formData.username}" created successfully!`);
+      showSuccess(`Account "${formData.username}" created successfully!`);
       setIsCreateModalOpen(false);
       resetForm();
       fetchUsers();
@@ -219,13 +244,15 @@ export default function UsersManagementPage() {
 
   const handleDeleteUser = async (user) => {
     if (user.role === "master_admin") {
-      showError("Cannot delete the Master Admin account.");
+      showError("Master Admin cannot be deleted.");
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
-      return;
-    }
+    const isConfirmed = window.confirm(
+      `Are you sure you want to permanently delete user "${user.username}"? This action cannot be undone.`
+    );
+
+    if (!isConfirmed) return;
 
     try {
       await deleteUser(user.id);
@@ -236,59 +263,116 @@ export default function UsersManagementPage() {
     }
   };
 
-  const filteredUsers = usersList.filter(
-    (u) =>
-      u.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.whatsapp_mode?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Helper map for finding parent client names
+  const clientMap = {};
+  usersList.forEach((u) => {
+    clientMap[u.id] = u.username;
+  });
 
-  const stats = {
-    total: usersList.length,
-    masterAdmin: usersList.filter((u) => u.role === "master_admin").length,
-    admins: usersList.filter((u) => u.role === "admin").length,
-    clients: usersList.filter((u) => u.role === "client").length,
-    companyMode: usersList.filter((u) => u.whatsapp_mode === "company").length,
-    personalMode: usersList.filter((u) => u.whatsapp_mode === "personal").length,
+  const clientOrgs = usersList.filter(
+    (u) => u.role === "client" || (!u.parent_client_id && u.role !== "master_admin")
+  );
+  const staffUsers = usersList.filter((u) => !!u.parent_client_id);
+  const companyUsers = usersList.filter((u) => u.whatsapp_mode === "company");
+  const personalUsers = usersList.filter((u) => u.whatsapp_mode === "personal");
+
+  const filteredUsers = usersList.filter((u) => {
+    // Search query match
+    const q = searchQuery.toLowerCase().trim();
+    const matchQuery =
+      !q ||
+      u.username?.toLowerCase().includes(q) ||
+      u.role?.toLowerCase().includes(q) ||
+      u.whatsapp_mode?.toLowerCase().includes(q) ||
+      (clientMap[u.parent_client_id] && clientMap[u.parent_client_id].toLowerCase().includes(q));
+
+    if (!matchQuery) return false;
+
+    // Category filter
+    if (categoryFilter === "clients") {
+      return u.role === "client" || (!u.parent_client_id && u.role !== "master_admin");
+    }
+    if (categoryFilter === "staff") {
+      return !!u.parent_client_id;
+    }
+    if (categoryFilter === "company") {
+      return u.whatsapp_mode === "company";
+    }
+    if (categoryFilter === "personal") {
+      return u.whatsapp_mode === "personal";
+    }
+    return true;
+  });
+
+  const handleSwitchToClient = (user) => {
+    localStorage.setItem("active_client_id", user.id);
+    localStorage.setItem("active_client_name", user.username);
+    localStorage.setItem("active_client_mode", user.whatsapp_mode || "company");
+    showSuccess(`Switched context to client workspace: ${user.username}`);
+    router.push("/chat");
   };
 
   return (
-    <div style={{ padding: "28px", maxWidth: "1280px", margin: "0 auto" }}>
-      {/* Page Header */}
+    <div style={{ height: "100%", overflowY: "auto", width: "100%" }}>
+      <div style={{ padding: "32px 36px", maxWidth: "1360px", margin: "0 auto", width: "100%" }}>
+      {/* Top Header Card */}
       <div
         style={{
+          background: "#ffffff",
+          border: "1px solid rgba(226, 232, 240, 0.8)",
+          borderRadius: "16px",
+          padding: "24px 28px",
+          marginBottom: "24px",
+          boxShadow: "0 4px 20px -2px rgba(0, 34, 119, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "24px",
+          alignItems: "center",
           flexWrap: "wrap",
-          gap: "16px",
+          gap: "18px",
         }}
       >
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, #002277, #2563eb)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ffffff",
-              }}
-            >
-              <ShieldCheck size={22} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: "24px", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                SaaS Client & User Management
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "14px",
+              background: "linear-gradient(135deg, #002277 0%, #1e40af 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+              boxShadow: "0 8px 16px -3px rgba(0, 34, 119, 0.28)",
+            }}
+          >
+            <ShieldCheck size={26} strokeWidth={2.2} />
+          </div>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <h1 style={{ fontSize: "22px", fontWeight: 800, margin: 0, color: "#090d16", letterSpacing: "-0.02em" }}>
+                Client &amp; Organization Management
               </h1>
-              <p style={{ margin: "4px 0 0", color: "var(--text-muted)", fontSize: "14px" }}>
-                Master Admin Portal • Create client accounts & configure WhatsApp sending modes
-              </p>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  padding: "3px 10px",
+                  borderRadius: "20px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  background: "rgba(16, 185, 129, 0.1)",
+                  color: "#059669",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                }}
+              >
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+                Master Admin Portal
+              </span>
             </div>
+            <p style={{ margin: 0, color: "#64748b", fontSize: "13.5px" }}>
+              Manage isolated client workspaces, team sub-logins, and Meta WhatsApp Cloud API credentials
+            </p>
           </div>
         </div>
 
@@ -297,27 +381,29 @@ export default function UsersManagementPage() {
             onClick={fetchUsers}
             disabled={loading}
             style={{
-              padding: "10px 14px",
-              borderRadius: "8px",
-              background: "var(--bg-tertiary)",
-              border: "1px solid var(--border-color)",
-              color: "var(--text-primary)",
+              padding: "10px 16px",
+              borderRadius: "10px",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              color: "#334155",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: "6px",
-              fontSize: "14px",
-              fontWeight: 500,
+              gap: "8px",
+              fontSize: "13.5px",
+              fontWeight: 600,
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+              transition: "all 0.15s ease",
             }}
           >
-            <RefreshCw size={15} className={loading ? "spin-animation" : ""} />
+            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
             Refresh
           </button>
           <button
             onClick={handleOpenCreate}
             style={{
-              padding: "10px 18px",
-              borderRadius: "8px",
+              padding: "10px 20px",
+              borderRadius: "10px",
               background: "linear-gradient(135deg, #002277 0%, #1e40af 100%)",
               border: "none",
               color: "#ffffff",
@@ -325,256 +411,418 @@ export default function UsersManagementPage() {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              fontSize: "14px",
+              fontSize: "13.5px",
               fontWeight: 600,
-              boxShadow: "0 2px 8px rgba(0, 34, 119, 0.25)",
+              boxShadow: "0 4px 12px rgba(0, 34, 119, 0.25)",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
             }}
           >
             <UserPlus size={16} />
-            Add New Client
+            Add New Client / User
           </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* KPI Stats Grid */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
           gap: "16px",
-          marginBottom: "28px",
+          marginBottom: "24px",
         }}
       >
+        {/* KPI 1 */}
         <div
           style={{
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
-            borderRadius: "12px",
-            padding: "18px",
+            background: "#ffffff",
+            border: "1px solid rgba(226, 232, 240, 0.8)",
+            borderRadius: "14px",
+            padding: "20px 22px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "13px" }}>
-            <span>Total Accounts</span>
-            <Users size={18} color="#2563eb" />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>Total Accounts</span>
+            <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(37, 99, 235, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
+              <Users size={18} />
+            </div>
           </div>
-          <div style={{ fontSize: "28px", fontWeight: 700, margin: "8px 0 0", color: "var(--text-primary)" }}>
-            {stats.total}
+          <div style={{ fontSize: "30px", fontWeight: 800, margin: "10px 0 2px", color: "#090d16" }}>
+            {usersList.length}
           </div>
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-            {stats.clients} clients • {stats.admins + stats.masterAdmin} admins
+          <div style={{ fontSize: "12.5px", color: "#64748b", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontWeight: 600, color: "#2563eb" }}>{clientOrgs.length} clients</span>
+            <span>•</span>
+            <span>{staffUsers.length} staff logins</span>
           </div>
         </div>
 
+        {/* KPI 2 */}
         <div
           style={{
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
-            borderRadius: "12px",
-            padding: "18px",
+            background: "#ffffff",
+            border: "1px solid rgba(226, 232, 240, 0.8)",
+            borderRadius: "14px",
+            padding: "20px 22px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "13px" }}>
-            <span>Company WhatsApp</span>
-            <Building size={18} color="#059669" />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>Client Organizations</span>
+            <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(5, 150, 105, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669" }}>
+              <Building size={18} />
+            </div>
           </div>
-          <div style={{ fontSize: "28px", fontWeight: 700, margin: "8px 0 0", color: "#059669" }}>
-            {stats.companyMode}
+          <div style={{ fontSize: "30px", fontWeight: 800, margin: "10px 0 2px", color: "#059669" }}>
+            {clientOrgs.length}
           </div>
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-            Using Central Company Channel
+          <div style={{ fontSize: "12.5px", color: "#64748b" }}>
+            Fully isolated customer workspaces
           </div>
         </div>
 
+        {/* KPI 3 */}
         <div
           style={{
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
-            borderRadius: "12px",
-            padding: "18px",
+            background: "#ffffff",
+            border: "1px solid rgba(226, 232, 240, 0.8)",
+            borderRadius: "14px",
+            padding: "20px 22px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "13px" }}>
-            <span>Personal Meta API</span>
-            <Smartphone size={18} color="#7c3aed" />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>Personal Meta API</span>
+            <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(124, 58, 237, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#7c3aed" }}>
+              <Smartphone size={18} />
+            </div>
           </div>
-          <div style={{ fontSize: "28px", fontWeight: 700, margin: "8px 0 0", color: "#7c3aed" }}>
-            {stats.personalMode}
+          <div style={{ fontSize: "30px", fontWeight: 800, margin: "10px 0 2px", color: "#7c3aed" }}>
+            {personalUsers.length}
           </div>
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-            Client personal WhatsApp numbers
+          <div style={{ fontSize: "12.5px", color: "#64748b" }}>
+            Dedicated client WABA numbers
           </div>
         </div>
 
+        {/* KPI 4 */}
         <div
           style={{
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
-            borderRadius: "12px",
-            padding: "18px",
+            background: "#ffffff",
+            border: "1px solid rgba(226, 232, 240, 0.8)",
+            borderRadius: "14px",
+            padding: "20px 22px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "13px" }}>
-            <span>Current Session</span>
-            <Shield size={18} color="#002277" />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>Platform Central Number</span>
+            <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(15, 59, 168, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#002277" }}>
+              <Shield size={18} />
+            </div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 700, margin: "12px 0 0", color: "#002277" }}>
-            {currentUser?.username || "Master Admin"}
+          <div style={{ fontSize: "30px", fontWeight: 800, margin: "10px 0 2px", color: "#002277" }}>
+            {companyUsers.length}
           </div>
-          <div style={{ fontSize: "12px", color: "#059669", marginTop: "4px", fontWeight: 600 }}>
-            Master Administrator
+          <div style={{ fontSize: "12.5px", color: "#64748b" }}>
+            Accounts routed via shared channel
           </div>
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
+      {/* Toolbar: Search + Filter Tabs */}
       <div
         style={{
-          background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
-          borderRadius: "12px",
-          padding: "16px",
-          marginBottom: "20px",
+          background: "#ffffff",
+          border: "1px solid rgba(226, 232, 240, 0.8)",
+          borderRadius: "14px",
+          padding: "12px 18px",
+          marginBottom: "18px",
           display: "flex",
-          gap: "12px",
+          justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+          boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
         }}
       >
-        <Search size={18} color="var(--text-muted)" />
-        <input
-          type="text"
-          placeholder="Search clients by username, role, or WhatsApp mode..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Search */}
+        <div
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: "10px",
+            padding: "8px 14px",
+            minWidth: "280px",
             flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: "var(--text-primary)",
-            fontSize: "14px",
+            maxWidth: "420px",
           }}
-        />
+        >
+          <Search size={16} color="#94a3b8" />
+          <input
+            type="text"
+            placeholder="Search accounts, client name, role..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              color: "#0f172a",
+              fontSize: "13.5px",
+              width: "100%",
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Pills */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+          {[
+            { id: "all", label: "All Accounts", count: usersList.length },
+            { id: "clients", label: "Clients", count: clientOrgs.length },
+            { id: "staff", label: "Staff Logins", count: staffUsers.length },
+            { id: "company", label: "Company Channel", count: companyUsers.length },
+            { id: "personal", label: "Personal Meta", count: personalUsers.length },
+          ].map((tab) => {
+            const isActive = categoryFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setCategoryFilter(tab.id)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  fontSize: "12.5px",
+                  fontWeight: isActive ? 700 : 500,
+                  background: isActive ? "#002277" : "#f1f5f9",
+                  color: isActive ? "#ffffff" : "#475569",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <span>{tab.label}</span>
+                <span
+                  style={{
+                    padding: "1px 6px",
+                    borderRadius: "10px",
+                    fontSize: "11px",
+                    background: isActive ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.08)",
+                  }}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Users Table */}
+      {/* Main SaaS Accounts Table */}
       <div
         style={{
-          background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
-          borderRadius: "12px",
+          background: "#ffffff",
+          border: "1px solid rgba(226, 232, 240, 0.8)",
+          borderRadius: "16px",
+          boxShadow: "0 4px 20px -2px rgba(0, 34, 119, 0.04)",
           overflow: "hidden",
         }}
       >
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
             <thead>
-              <tr style={{ background: "var(--bg-tertiary)", borderBottom: "1px solid var(--border-color)" }}>
-                <th style={{ padding: "14px 16px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>User / Client</th>
-                <th style={{ padding: "14px 16px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Role</th>
-                <th style={{ padding: "14px 16px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>WhatsApp Sender Mode</th>
-                <th style={{ padding: "14px 16px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Channel Details</th>
-                <th style={{ padding: "14px 16px", textAlign: "left", color: "var(--text-muted)", fontWeight: 600 }}>Status</th>
-                <th style={{ padding: "14px 16px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>Actions</th>
+              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                <th style={{ padding: "14px 20px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  User / Client Account
+                </th>
+                <th style={{ padding: "14px 18px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Account Hierarchy
+                </th>
+                <th style={{ padding: "14px 18px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  WhatsApp Channel Mode
+                </th>
+                <th style={{ padding: "14px 18px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Channel Details
+                </th>
+                <th style={{ padding: "14px 18px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Status
+                </th>
+                <th style={{ padding: "14px 20px", textAlign: "right", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
-                    <RefreshCw size={24} className="spin-animation" style={{ margin: "0 auto 8px" }} />
-                    <div>Loading users...</div>
+                  <td colSpan={6} style={{ padding: "50px", textAlign: "center", color: "#64748b" }}>
+                    <RefreshCw size={24} className="animate-spin" style={{ margin: "0 auto 10px", color: "#002277" }} />
+                    <div style={{ fontWeight: 600 }}>Loading SaaS accounts...</div>
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
-                    No users found matching your search.
+                  <td colSpan={6} style={{ padding: "60px 20px", textAlign: "center" }}>
+                    <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", color: "#94a3b8" }}>
+                      <Users size={22} />
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: "15px", color: "#0f172a", marginBottom: "4px" }}>
+                      No accounts found
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: "13px" }}>
+                      Try adjusting your search terms or filter selection.
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => {
-                  const isMaster = user.role === "master_admin";
+                  const isMaster = user.role === "master_admin" || user.username?.toLowerCase() === "piyushassudani";
+                  const isStaff = !!user.parent_client_id;
                   const isPersonal = user.whatsapp_mode === "personal";
+                  const parentOrgName = user.parent_client_id ? clientMap[user.parent_client_id] : null;
 
                   return (
                     <tr
                       key={user.id}
                       style={{
-                        borderBottom: "1px solid var(--border-color)",
+                        borderBottom: "1px solid #f1f5f9",
                         transition: "background 0.15s ease",
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "14px 16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {/* User / Client Account */}
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           <div
                             style={{
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "8px",
+                              width: "38px",
+                              height: "38px",
+                              borderRadius: "10px",
                               background: isMaster
                                 ? "linear-gradient(135deg, #002277, #7c3aed)"
-                                : "var(--bg-tertiary)",
-                              color: isMaster ? "#ffffff" : "var(--text-primary)",
+                                : isStaff
+                                ? "linear-gradient(135deg, #059669, #10b981)"
+                                : "linear-gradient(135deg, #1e40af, #3b82f6)",
+                              color: "#ffffff",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontWeight: 700,
+                              fontWeight: 800,
                               fontSize: "14px",
+                              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
+                              flexShrink: 0,
                             }}
                           >
                             {user.username?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{user.username}</div>
-                            <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                              ID: {user.id.substring(0, 8)}...
+                            <div style={{ fontWeight: 700, color: "#0f172a", fontSize: "14px" }}>
+                              {user.username}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#94a3b8", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                              <span style={{ fontFamily: "monospace" }}>ID: {user.id?.substring(0, 8)}...</span>
+                              {user.created_at && (
+                                <>
+                                  <span>•</span>
+                                  <span>{new Date(user.created_at).toLocaleDateString()}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      <td style={{ padding: "14px 16px" }}>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            padding: "4px 10px",
-                            borderRadius: "12px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            background: isMaster
-                              ? "rgba(124, 58, 237, 0.12)"
-                              : user.role === "admin"
-                              ? "rgba(37, 99, 235, 0.12)"
-                              : "rgba(100, 116, 139, 0.12)",
-                            color: isMaster ? "#7c3aed" : user.role === "admin" ? "#2563eb" : "#475569",
-                            border: `1px solid ${
-                              isMaster
-                                ? "rgba(124, 58, 237, 0.25)"
-                                : user.parent_client_id
-                                ? "rgba(16, 185, 129, 0.25)"
-                                : "rgba(37, 99, 235, 0.25)"
-                            }`,
-                          }}
-                        >
-                          {isMaster
-                            ? "👑 Master Admin"
-                            : user.parent_client_id
-                            ? "👥 Staff Login"
-                            : "🏢 Client Org"}
-                        </span>
+                      {/* Account Hierarchy */}
+                      <td style={{ padding: "16px 18px" }}>
+                        {isMaster ? (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "4px 10px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              background: "rgba(124, 58, 237, 0.1)",
+                              color: "#7c3aed",
+                              border: "1px solid rgba(124, 58, 237, 0.25)",
+                            }}
+                          >
+                            👑 Master Admin
+                          </span>
+                        ) : isStaff ? (
+                          <div>
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                padding: "4px 10px",
+                                borderRadius: "20px",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                background: "rgba(16, 185, 129, 0.1)",
+                                color: "#059669",
+                                border: "1px solid rgba(16, 185, 129, 0.25)",
+                              }}
+                            >
+                              👥 Staff Sub-Login
+                            </span>
+                            {parentOrgName && (
+                              <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
+                                under <strong>{parentOrgName}</strong>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "4px 10px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              background: "rgba(37, 99, 235, 0.1)",
+                              color: "#2563eb",
+                              border: "1px solid rgba(37, 99, 235, 0.25)",
+                            }}
+                          >
+                            🏢 Client Organization
+                          </span>
+                        )}
                       </td>
 
-                      <td style={{ padding: "14px 16px" }}>
+                      {/* WhatsApp Channel Mode */}
+                      <td style={{ padding: "16px 18px" }}>
                         <span
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "5px",
+                            gap: "6px",
                             padding: "4px 10px",
-                            borderRadius: "12px",
+                            borderRadius: "8px",
                             fontSize: "12px",
                             fontWeight: 600,
-                            background: isPersonal ? "rgba(124, 58, 237, 0.1)" : "rgba(5, 150, 105, 0.1)",
+                            background: isPersonal ? "rgba(124, 58, 237, 0.08)" : "rgba(5, 150, 105, 0.08)",
                             color: isPersonal ? "#7c3aed" : "#059669",
                             border: `1px solid ${isPersonal ? "rgba(124, 58, 237, 0.2)" : "rgba(5, 150, 105, 0.2)"}`,
                           }}
@@ -584,36 +832,40 @@ export default function UsersManagementPage() {
                         </span>
                       </td>
 
-                      <td style={{ padding: "14px 16px", color: "var(--text-secondary)", fontSize: "13px" }}>
+                      {/* Channel Details */}
+                      <td style={{ padding: "16px 18px", color: "#475569", fontSize: "13px" }}>
                         {isPersonal ? (
                           user.meta_phone_number_id ? (
                             <div>
-                              <div style={{ fontWeight: 500, color: "var(--text-primary)" }}>
-                                {user.meta_verified_name || "Verified Meta Number"}
+                              <div style={{ fontWeight: 600, color: "#0f172a" }}>
+                                {user.meta_verified_name || "Verified Meta Account"}
                               </div>
-                              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                                ID: {user.meta_phone_number_id}
+                              <div style={{ fontSize: "11px", color: "#64748b" }}>
+                                {user.meta_display_phone_number || `ID: ${user.meta_phone_number_id}`}
                               </div>
                             </div>
                           ) : (
-                            <span style={{ color: "#d97706", fontSize: "12px" }}>⚠️ Setup incomplete</span>
+                            <span style={{ color: "#d97706", fontSize: "12px", fontWeight: 500 }}>
+                              ⚠️ Pending Credentials
+                            </span>
                           )
                         ) : (
                           <div>
-                            <div style={{ fontWeight: 500, color: "var(--text-primary)" }}>Company WhatsApp</div>
-                            <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Platform Central Channel</div>
+                            <div style={{ fontWeight: 600, color: "#0f172a" }}>Company Channel</div>
+                            <div style={{ fontSize: "11px", color: "#64748b" }}>Platform Central Sender</div>
                           </div>
                         )}
                       </td>
 
-                      <td style={{ padding: "14px 16px" }}>
+                      {/* Status */}
+                      <td style={{ padding: "16px 18px" }}>
                         <span
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "5px",
+                            gap: "6px",
                             fontSize: "12px",
-                            fontWeight: 600,
+                            fontWeight: 700,
                             color: "#059669",
                           }}
                         >
@@ -623,80 +875,93 @@ export default function UsersManagementPage() {
                               height: "7px",
                               borderRadius: "50%",
                               background: "#10b981",
+                              boxShadow: "0 0 6px rgba(16, 185, 129, 0.6)",
                             }}
                           />
                           Active
                         </span>
                       </td>
 
-                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: "6px" }}>
-                          {!isMaster && (
-                            <button
-                              onClick={() => {
-                                localStorage.setItem("active_client_id", user.id);
-                                localStorage.setItem("active_client_name", user.username);
-                                localStorage.setItem("active_client_mode", user.whatsapp_mode || "company");
-                                router.push("/chat");
-                              }}
-                              title="Switch into this client's view & workspace"
+                      {/* Actions */}
+                      <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                          {!isMaster ? (
+                            <>
+                              <button
+                                onClick={() => handleSwitchToClient(user)}
+                                title="Open this client's isolated workspace"
+                                style={{
+                                  background: "rgba(99, 102, 241, 0.08)",
+                                  border: "1px solid rgba(99, 102, 241, 0.25)",
+                                  borderRadius: "8px",
+                                  padding: "6px 12px",
+                                  cursor: "pointer",
+                                  color: "#4f46e5",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  fontSize: "12px",
+                                  fontWeight: 700,
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <Eye size={13} />
+                                View Workspace
+                              </button>
+                              <button
+                                onClick={() => handleOpenEdit(user)}
+                                title="Edit user settings"
+                                style={{
+                                  background: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "8px",
+                                  padding: "6px 10px",
+                                  cursor: "pointer",
+                                  color: "#334155",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  fontSize: "12px",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                <Edit size={13} />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user)}
+                                title="Delete account"
+                                style={{
+                                  background: "rgba(239, 68, 68, 0.08)",
+                                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                                  borderRadius: "8px",
+                                  padding: "6px 10px",
+                                  cursor: "pointer",
+                                  color: "#dc2626",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  fontSize: "12px",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <span
                               style={{
-                                background: "rgba(99, 102, 241, 0.1)",
-                                border: "1px solid rgba(99, 102, 241, 0.25)",
-                                borderRadius: "6px",
-                                padding: "6px 10px",
-                                cursor: "pointer",
-                                color: "#4f46e5",
-                                display: "flex",
+                                fontSize: "11.5px",
+                                color: "#94a3b8",
+                                fontStyle: "italic",
+                                display: "inline-flex",
                                 alignItems: "center",
                                 gap: "4px",
-                                fontSize: "12px",
-                                fontWeight: 600,
                               }}
                             >
-                              <Eye size={13} />
-                              View
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleOpenEdit(user)}
-                            title="Edit User & Credentials"
-                            style={{
-                              background: "var(--bg-tertiary)",
-                              border: "1px solid var(--border-color)",
-                              borderRadius: "6px",
-                              padding: "6px 10px",
-                              cursor: "pointer",
-                              color: "var(--text-primary)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "12px",
-                            }}
-                          >
-                            <Edit size={13} />
-                            Edit
-                          </button>
-                          {!isMaster && (
-                            <button
-                              onClick={() => handleDeleteUser(user)}
-                              title="Delete Client"
-                              style={{
-                                background: "rgba(239, 68, 68, 0.1)",
-                                border: "1px solid rgba(239, 68, 68, 0.25)",
-                                borderRadius: "6px",
-                                padding: "6px 10px",
-                                cursor: "pointer",
-                                color: "#dc2626",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                fontSize: "12px",
-                              }}
-                            >
-                              <Trash2 size={13} />
-                              Delete
-                            </button>
+                              <Shield size={12} />
+                              Master Root
+                            </span>
                           )}
                         </div>
                       </td>
@@ -709,7 +974,7 @@ export default function UsersManagementPage() {
         </div>
       </div>
 
-      {/* CREATE USER MODAL */}
+      {/* CREATE MODAL */}
       {isCreateModalOpen && (
         <div
           style={{
@@ -718,90 +983,99 @@ export default function UsersManagementPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(9, 13, 22, 0.6)",
+            backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 999,
+            zIndex: 9999,
             padding: "20px",
           }}
         >
           <div
             style={{
-              background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
-              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "18px",
               width: "100%",
               maxWidth: "540px",
-              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
+              boxShadow: "0 24px 48px -12px rgba(0, 34, 119, 0.25)",
               overflow: "hidden",
             }}
           >
             <div
               style={{
                 padding: "20px 24px",
-                borderBottom: "1px solid var(--border-color)",
+                borderBottom: "1px solid #e2e8f0",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                background: "#f8fafc",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <UserPlus size={20} color="#002277" />
-                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--text-primary)" }}>
-                  Create New Client Account
-                </h3>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(0, 34, 119, 0.08)", color: "#002277", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <UserPlus size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#090d16" }}>
+                    Provision New SaaS Account
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                    Create client organization or team sub-login
+                  </p>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleCreateSubmit} style={{ padding: "24px" }}>
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                  Username / Client ID *
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                  Account Username
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. kapil_enterprises"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="e.g. kapilchaudhary"
+                  required
                   style={{
                     width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-color)",
-                    color: "var(--text-primary)",
+                    padding: "10px 14px",
+                    borderRadius: "10px",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    color: "#0f172a",
                     fontSize: "14px",
                   }}
                 />
               </div>
 
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                  Password *
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                  Login Password
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="Enter secure initial password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Min 4 characters"
+                    required
                     style={{
                       width: "100%",
-                      padding: "10px 40px 10px 12px",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
+                      padding: "10px 40px 10px 14px",
+                      borderRadius: "10px",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
                       fontSize: "14px",
                     }}
                   />
@@ -810,12 +1084,12 @@ export default function UsersManagementPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     style={{
                       position: "absolute",
-                      right: "10px",
+                      right: "12px",
                       top: "50%",
                       transform: "translateY(-50%)",
                       background: "none",
                       border: "none",
-                      color: "var(--text-muted)",
+                      color: "#94a3b8",
                       cursor: "pointer",
                     }}
                   >
@@ -824,10 +1098,10 @@ export default function UsersManagementPage() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                    Account Role
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                    Account Type
                   </label>
                   <select
                     value={formData.role}
@@ -835,21 +1109,22 @@ export default function UsersManagementPage() {
                     style={{
                       width: "100%",
                       padding: "10px 12px",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      fontSize: "14px",
+                      borderRadius: "10px",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
+                      fontSize: "13.5px",
+                      fontWeight: 600,
                     }}
                   >
-                    <option value="client">Client Organization</option>
-                    <option value="user">Sub-Login (Staff under Client)</option>
+                    <option value="client">🏢 Client Organization</option>
+                    <option value="user">👥 Staff Sub-Login</option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                    WhatsApp Sender Channel
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                    Sending Channel
                   </label>
                   <select
                     value={formData.whatsapp_mode}
@@ -857,178 +1132,97 @@ export default function UsersManagementPage() {
                     style={{
                       width: "100%",
                       padding: "10px 12px",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      fontSize: "14px",
+                      borderRadius: "10px",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
+                      fontSize: "13.5px",
+                      fontWeight: 600,
                     }}
                   >
-                    <option value="company">🏢 Company Default WhatsApp Channel</option>
-                    <option value="personal">📱 Personal Meta API (BYO Key)</option>
+                    <option value="company">🏢 Company Default Channel</option>
+                    <option value="personal">📱 Personal Meta API Key</option>
                   </select>
                 </div>
               </div>
 
               {formData.role === "user" && (
-                <div style={{ marginBottom: "16px" }}>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                    Parent Client Organization
+                <div style={{ marginBottom: "18px", padding: "12px", background: "rgba(16, 185, 129, 0.05)", borderRadius: "10px", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, marginBottom: "6px", color: "#059669" }}>
+                    Select Parent Client Organization
                   </label>
                   <select
-                    value={formData.parent_client_id || ""}
+                    value={formData.parent_client_id}
                     onChange={(e) => setFormData({ ...formData, parent_client_id: e.target.value })}
+                    required
                     style={{
                       width: "100%",
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      fontSize: "14px",
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
+                      fontSize: "13.5px",
                     }}
-                    required
                   >
-                    <option value="">-- Select Parent Client --</option>
-                    {users
-                      .filter((u) => u.role === "client" || (!u.parent_client_id && u.role !== "master_admin"))
-                      .map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {client.username}
-                        </option>
-                      ))}
+                    <option value="">-- Choose Client --</option>
+                    {clientOrgs.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.username}
+                      </option>
+                    ))}
                   </select>
+                  <p style={{ margin: "6px 0 0", fontSize: "11.5px", color: "#64748b" }}>
+                    This staff login will share all contacts, chats, and sending channel of the selected client.
+                  </p>
                 </div>
               )}
 
-              {/* Personal Meta API Credentials Section */}
+              {/* Personal Meta Details */}
               {formData.whatsapp_mode === "personal" && (
-                <div
-                  style={{
-                    background: "rgba(124, 58, 237, 0.05)",
-                    border: "1px solid rgba(124, 58, 237, 0.2)",
-                    borderRadius: "10px",
-                    padding: "16px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", color: "#7c3aed" }}>
-                    <Smartphone size={16} />
-                    <span style={{ fontSize: "13px", fontWeight: 700 }}>Personal Meta API Credentials</span>
+                <div style={{ marginBottom: "18px", padding: "14px", background: "rgba(124, 58, 237, 0.04)", borderRadius: "12px", border: "1px solid rgba(124, 58, 237, 0.2)" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#7c3aed", marginBottom: "10px" }}>
+                    Personal Meta Cloud API Credentials
                   </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
-                      WhatsApp Phone Number ID
-                    </label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     <input
                       type="text"
-                      placeholder="e.g. 1404154399449473"
+                      placeholder="Phone Number ID"
                       value={formData.meta_phone_number_id}
                       onChange={(e) => setFormData({ ...formData, meta_phone_number_id: e.target.value })}
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "6px",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-color)",
-                        color: "var(--text-primary)",
-                        fontSize: "13px",
-                      }}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }}
                     />
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
-                      WhatsApp Business Account ID (WABA ID)
-                    </label>
                     <input
                       type="text"
-                      placeholder="e.g. 1915831806460496"
+                      placeholder="WABA ID (Optional)"
                       value={formData.meta_waba_id}
                       onChange={(e) => setFormData({ ...formData, meta_waba_id: e.target.value })}
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "6px",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-color)",
-                        color: "var(--text-primary)",
-                        fontSize: "13px",
-                      }}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }}
                     />
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
-                      Permanent System User Access Token
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="EAAVBwoAGBZBg..."
+                    <textarea
+                      placeholder="System User Access Token (EAAG...)"
+                      rows={2}
                       value={formData.meta_access_token}
                       onChange={(e) => setFormData({ ...formData, meta_access_token: e.target.value })}
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "6px",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-color)",
-                        color: "var(--text-primary)",
-                        fontSize: "13px",
-                      }}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", resize: "none" }}
                     />
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleTestMeta}
-                    disabled={testingMeta}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "6px",
-                      background: "rgba(124, 58, 237, 0.15)",
-                      border: "1px solid rgba(124, 58, 237, 0.3)",
-                      color: "#7c3aed",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <Zap size={13} />
-                    {testingMeta ? "Verifying with Meta..." : "Test Meta Connection"}
-                  </button>
-
-                  {metaTestResult && (
-                    <div
-                      style={{
-                        marginTop: "10px",
-                        fontSize: "12px",
-                        color: metaTestResult.success ? "#059669" : "#dc2626",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {metaTestResult.message}
-                    </div>
-                  )}
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
                   style={{
                     padding: "10px 16px",
-                    borderRadius: "8px",
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-color)",
-                    color: "var(--text-primary)",
+                    borderRadius: "10px",
+                    background: "#f1f5f9",
+                    border: "none",
+                    color: "#475569",
+                    fontWeight: 600,
+                    fontSize: "13.5px",
                     cursor: "pointer",
-                    fontSize: "14px",
                   }}
                 >
                   Cancel
@@ -1037,17 +1231,18 @@ export default function UsersManagementPage() {
                   type="submit"
                   disabled={submitting}
                   style={{
-                    padding: "10px 20px",
-                    borderRadius: "8px",
+                    padding: "10px 22px",
+                    borderRadius: "10px",
                     background: "linear-gradient(135deg, #002277 0%, #1e40af 100%)",
                     border: "none",
                     color: "#ffffff",
+                    fontWeight: 700,
+                    fontSize: "13.5px",
                     cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: 600,
+                    boxShadow: "0 4px 12px rgba(0, 34, 119, 0.25)",
                   }}
                 >
-                  {submitting ? "Creating..." : "Create Client Account"}
+                  {submitting ? "Creating..." : "Create Account"}
                 </button>
               </div>
             </form>
@@ -1055,7 +1250,7 @@ export default function UsersManagementPage() {
         </div>
       )}
 
-      {/* EDIT USER MODAL */}
+      {/* EDIT MODAL */}
       {isEditModalOpen && editingUser && (
         <div
           style={{
@@ -1064,283 +1259,147 @@ export default function UsersManagementPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(9, 13, 22, 0.6)",
+            backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 999,
+            zIndex: 9999,
             padding: "20px",
           }}
         >
           <div
             style={{
-              background: "var(--bg-secondary)",
-              border: "1px solid var(--border-color)",
-              borderRadius: "14px",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "18px",
               width: "100%",
               maxWidth: "540px",
-              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
+              boxShadow: "0 24px 48px -12px rgba(0, 34, 119, 0.25)",
               overflow: "hidden",
             }}
           >
             <div
               style={{
                 padding: "20px 24px",
-                borderBottom: "1px solid var(--border-color)",
+                borderBottom: "1px solid #e2e8f0",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                background: "#f8fafc",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Edit size={20} color="#002277" />
-                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--text-primary)" }}>
-                  Edit User: {editingUser.username}
-                </h3>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(0, 34, 119, 0.08)", color: "#002277", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Edit size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#090d16" }}>
+                    Edit Account: {editingUser.username}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                    Update password or WhatsApp sending credentials
+                  </p>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ padding: "24px" }}>
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                  New Password (leave blank to keep current)
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                  Change Password (optional)
                 </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter new password (optional)"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 40px 10px 12px",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      fontSize: "14px",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: "absolute",
-                      right: "10px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "none",
-                      border: "none",
-                      color: "var(--text-muted)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                    Account Role
-                  </label>
-                  <select
-                    value={formData.role}
-                    disabled={editingUser.role === "master_admin"}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <option value="client">Client Organization</option>
-                    <option value="user">Sub-Login (Staff under Client)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                    WhatsApp Sender Channel
-                  </label>
-                  <select
-                    value={formData.whatsapp_mode}
-                    onChange={(e) => setFormData({ ...formData, whatsapp_mode: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <option value="company">🏢 Company Default WhatsApp Channel</option>
-                    <option value="personal">📱 Personal Meta API (BYO Key)</option>
-                  </select>
-                </div>
-              </div>
-
-              {formData.role === "user" && (
-                <div style={{ marginBottom: "16px" }}>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "var(--text-primary)" }}>
-                    Parent Client Organization
-                  </label>
-                  <select
-                    value={formData.parent_client_id || ""}
-                    onChange={(e) => setFormData({ ...formData, parent_client_id: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      fontSize: "14px",
-                    }}
-                    required
-                  >
-                    <option value="">-- Select Parent Client --</option>
-                    {users
-                      .filter((u) => u.role === "client" || (!u.parent_client_id && u.role !== "master_admin"))
-                      .map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {client.username}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
-
-              {formData.whatsapp_mode === "personal" && (
-                <div
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Leave empty to keep existing password"
                   style={{
-                    background: "rgba(124, 58, 237, 0.05)",
-                    border: "1px solid rgba(124, 58, 237, 0.2)",
+                    width: "100%",
+                    padding: "10px 14px",
                     borderRadius: "10px",
-                    padding: "16px",
-                    marginBottom: "16px",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    color: "#0f172a",
+                    fontSize: "14px",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                  WhatsApp Sending Channel
+                </label>
+                <select
+                  value={formData.whatsapp_mode}
+                  onChange={(e) => setFormData({ ...formData, whatsapp_mode: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    color: "#0f172a",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", color: "#7c3aed" }}>
-                    <Smartphone size={16} />
-                    <span style={{ fontSize: "13px", fontWeight: 700 }}>Personal Meta API Credentials</span>
-                  </div>
+                  <option value="company">🏢 Company Default Channel</option>
+                  <option value="personal">📱 Personal Meta API Key</option>
+                </select>
+              </div>
 
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
-                      WhatsApp Phone Number ID
-                    </label>
+              {formData.whatsapp_mode === "personal" && (
+                <div style={{ marginBottom: "18px", padding: "14px", background: "rgba(124, 58, 237, 0.04)", borderRadius: "12px", border: "1px solid rgba(124, 58, 237, 0.2)" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#7c3aed", marginBottom: "10px" }}>
+                    Personal Meta Cloud API Credentials
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     <input
                       type="text"
-                      placeholder="e.g. 1404154399449473"
+                      placeholder="Phone Number ID"
                       value={formData.meta_phone_number_id}
                       onChange={(e) => setFormData({ ...formData, meta_phone_number_id: e.target.value })}
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "6px",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-color)",
-                        color: "var(--text-primary)",
-                        fontSize: "13px",
-                      }}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }}
                     />
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
-                      WhatsApp Business Account ID (WABA ID)
-                    </label>
                     <input
                       type="text"
-                      placeholder="e.g. 1915831806460496"
+                      placeholder="WABA ID"
                       value={formData.meta_waba_id}
                       onChange={(e) => setFormData({ ...formData, meta_waba_id: e.target.value })}
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "6px",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-color)",
-                        color: "var(--text-primary)",
-                        fontSize: "13px",
-                      }}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }}
                     />
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px" }}>
-                      New Access Token (leave empty to keep current)
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Paste new token only if updating"
+                    <textarea
+                      placeholder="New System User Access Token (leave blank to keep current)"
+                      rows={2}
                       value={formData.meta_access_token}
                       onChange={(e) => setFormData({ ...formData, meta_access_token: e.target.value })}
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "6px",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-color)",
-                        color: "var(--text-primary)",
-                        fontSize: "13px",
-                      }}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", resize: "none" }}
                     />
                   </div>
-
-                  {formData.meta_access_token && (
-                    <button
-                      type="button"
-                      onClick={handleTestMeta}
-                      disabled={testingMeta}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        background: "rgba(124, 58, 237, 0.15)",
-                        border: "1px solid rgba(124, 58, 237, 0.3)",
-                        color: "#7c3aed",
-                        cursor: "pointer",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <Zap size={13} />
-                      {testingMeta ? "Verifying with Meta..." : "Test Meta Connection"}
-                    </button>
-                  )}
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
                   style={{
                     padding: "10px 16px",
-                    borderRadius: "8px",
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-color)",
-                    color: "var(--text-primary)",
+                    borderRadius: "10px",
+                    background: "#f1f5f9",
+                    border: "none",
+                    color: "#475569",
+                    fontWeight: 600,
+                    fontSize: "13.5px",
                     cursor: "pointer",
-                    fontSize: "14px",
                   }}
                 >
                   Cancel
@@ -1349,14 +1408,15 @@ export default function UsersManagementPage() {
                   type="submit"
                   disabled={submitting}
                   style={{
-                    padding: "10px 20px",
-                    borderRadius: "8px",
+                    padding: "10px 22px",
+                    borderRadius: "10px",
                     background: "linear-gradient(135deg, #002277 0%, #1e40af 100%)",
                     border: "none",
                     color: "#ffffff",
+                    fontWeight: 700,
+                    fontSize: "13.5px",
                     cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: 600,
+                    boxShadow: "0 4px 12px rgba(0, 34, 119, 0.25)",
                   }}
                 >
                   {submitting ? "Saving..." : "Save Changes"}
@@ -1366,6 +1426,7 @@ export default function UsersManagementPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
