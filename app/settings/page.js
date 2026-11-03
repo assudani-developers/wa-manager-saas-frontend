@@ -100,6 +100,7 @@ export default function SettingsPage() {
   const [newTeamUsername, setNewTeamUsername] = useState("");
   const [newTeamPassword, setNewTeamPassword] = useState("");
   const [showTeamPassword, setShowTeamPassword] = useState(false);
+  const [visibleTeamPasswords, setVisibleTeamPasswords] = useState({});
   const [addingTeamMember, setAddingTeamMember] = useState(false);
 
   const loadTeam = () => {
@@ -852,8 +853,43 @@ export default function SettingsPage() {
                           <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text-primary)" }}>
                             {m.username}
                           </div>
-                          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                            Role: Staff Member • Created: {new Date(m.created_at).toLocaleDateString()}
+                          <div style={{ fontSize: "11px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px", marginTop: "3px", flexWrap: "wrap" }}>
+                            <span>Role: Staff Member</span>
+                            <span>•</span>
+                            <span style={{ fontWeight: 600 }}>Pass:</span>
+                            <span
+                              style={{
+                                fontFamily: "monospace",
+                                color: visibleTeamPasswords[m.id] ? "var(--accent)" : "var(--text-primary)",
+                                background: "var(--bg-tertiary)",
+                                padding: "1px 6px",
+                                borderRadius: "4px",
+                                letterSpacing: visibleTeamPasswords[m.id] ? "0.5px" : "1.5px",
+                              }}
+                            >
+                              {visibleTeamPasswords[m.id] ? (m.raw_password || "(not set)") : "••••••••"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setVisibleTeamPasswords((p) => ({ ...p, [m.id]: !p[m.id] }))}
+                              title={visibleTeamPasswords[m.id] ? "Hide password" : "Show password"}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, display: "flex" }}
+                            >
+                              {visibleTeamPasswords[m.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                            </button>
+                            {m.raw_password && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(m.raw_password);
+                                  showSuccess(`Password for ${m.username} copied!`);
+                                }}
+                                title="Copy password"
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, display: "flex" }}
+                              >
+                                <Copy size={12} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

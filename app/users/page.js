@@ -27,6 +27,7 @@ import {
   Sparkles,
   ArrowRight,
   UserCheck,
+  Copy,
 } from "lucide-react";
 import api, { getUsers, createUser, updateUser, deleteUser, testMetaCredentials } from "../lib/api";
 import { useToast } from "../components/ToastProvider";
@@ -46,12 +47,19 @@ export default function UsersManagementPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
+  // Password visibility map for table rows
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const togglePasswordVisibility = (userId) => {
+    setVisiblePasswords((prev) => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
   // Form states
   const [formData, setFormData] = useState({
     username: "",
     password: "",
     role: "client",
     parent_client_id: "",
+    status: "active",
     whatsapp_mode: "company",
     meta_phone_number_id: "",
     meta_waba_id: "",
@@ -113,12 +121,14 @@ export default function UsersManagementPage() {
       password: "",
       role: "client",
       parent_client_id: "",
+      status: "active",
       whatsapp_mode: "company",
       meta_phone_number_id: "",
       meta_waba_id: "",
       meta_access_token: "",
     });
     setShowPassword(false);
+    setShowEditPassword(false);
     setMetaTestResult(null);
   };
 
@@ -130,15 +140,17 @@ export default function UsersManagementPage() {
   const handleOpenEdit = (user) => {
     setEditingUser(user);
     setFormData({
-      username: user.username,
-      password: "",
+      username: user.username || "",
+      password: user.raw_password || "",
       role: user.role || "client",
       parent_client_id: user.parent_client_id || "",
+      status: user.status || "active",
       whatsapp_mode: user.whatsapp_mode || "company",
       meta_phone_number_id: user.meta_phone_number_id || "",
       meta_waba_id: user.meta_waba_id || "",
-      meta_access_token: "",
+      meta_access_token: user.meta_access_token || "",
     });
+    setShowEditPassword(false);
     setMetaTestResult(null);
     setIsEditModalOpen(true);
   };
@@ -214,13 +226,21 @@ export default function UsersManagementPage() {
     e.preventDefault();
     if (!editingUser) return;
 
+    if (!formData.username.trim()) {
+      showError("Username cannot be empty.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
+        username: formData.username.trim(),
         role: formData.role,
+        parent_client_id: formData.parent_client_id || null,
+        status: formData.status || "active",
         whatsapp_mode: formData.whatsapp_mode,
-        meta_phone_number_id: formData.meta_phone_number_id,
-        meta_waba_id: formData.meta_waba_id,
+        meta_phone_number_id: formData.meta_phone_number_id ? formData.meta_phone_number_id.trim() : null,
+        meta_waba_id: formData.meta_waba_id ? formData.meta_waba_id.trim() : null,
       };
 
       if (formData.password.trim()) {
@@ -231,7 +251,7 @@ export default function UsersManagementPage() {
       }
 
       await updateUser(editingUser.id, payload);
-      showSuccess(`User "${editingUser.username}" updated successfully!`);
+      showSuccess(`Account "${formData.username.trim()}" updated successfully!`);
       setIsEditModalOpen(false);
       setEditingUser(null);
       resetForm();
@@ -743,6 +763,62 @@ export default function UsersManagementPage() {
                                   <span>•</span>
                                   <span>{new Date(user.created_at).toLocaleDateString()}</span>
                                 </>
+                              )}
+                            </div>
+                            {/* Password Badge with Show/Hide & Copy */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                              <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748b" }}>Pass:</span>
+                              <span
+                                style={{
+                                  fontFamily: "monospace",
+                                  fontSize: "12px",
+                                  fontWeight: 600,
+                                  color: visiblePasswords[user.id] ? "#1e40af" : "#64748b",
+                                  background: visiblePasswords[user.id] ? "rgba(37, 99, 235, 0.08)" : "#f1f5f9",
+                                  border: visiblePasswords[user.id] ? "1px solid rgba(37, 99, 235, 0.2)" : "1px solid #e2e8f0",
+                                  padding: "1px 7px",
+                                  borderRadius: "5px",
+                                  letterSpacing: visiblePasswords[user.id] ? "0.5px" : "1.5px",
+                                }}
+                              >
+                                {visiblePasswords[user.id] ? (user.raw_password || "(not set)") : "••••••••"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(user.id)}
+                                title={visiblePasswords[user.id] ? "Hide Password" : "Show Password"}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  color: visiblePasswords[user.id] ? "#2563eb" : "#64748b",
+                                  padding: "2px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                }}
+                              >
+                                {visiblePasswords[user.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                              </button>
+                              {user.raw_password && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(user.raw_password);
+                                    showSuccess(`Password for ${user.username} copied!`);
+                                  }}
+                                  title="Copy Password"
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    color: "#64748b",
+                                    padding: "2px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <Copy size={13} />
+                                </button>
                               )}
                             </div>
                           </div>
@@ -1275,8 +1351,11 @@ export default function UsersManagementPage() {
               border: "1px solid #e2e8f0",
               borderRadius: "18px",
               width: "100%",
-              maxWidth: "540px",
+              maxWidth: "580px",
+              maxHeight: "90vh",
               boxShadow: "0 24px 48px -12px rgba(0, 34, 119, 0.25)",
+              display: "flex",
+              flexDirection: "column",
               overflow: "hidden",
             }}
           >
@@ -1288,6 +1367,7 @@ export default function UsersManagementPage() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 background: "#f8fafc",
+                flexShrink: 0,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1299,7 +1379,7 @@ export default function UsersManagementPage() {
                     Edit Account: {editingUser.username}
                   </h3>
                   <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
-                    Update password or WhatsApp sending credentials
+                    Update username, password, permissions, and WhatsApp channels
                   </p>
                 </div>
               </div>
@@ -1312,17 +1392,68 @@ export default function UsersManagementPage() {
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} style={{ padding: "24px" }}>
+            <form onSubmit={handleEditSubmit} style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
+              {/* Username Input */}
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
-                  Change Password (optional)
+                  Account Username / Login Handle
                 </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="e.g. client_username"
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "10px",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    color: "#0f172a",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                  }}
+                />
+              </div>
+
+              {/* Password Input with Show/Hide & Copy */}
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "#090d16", margin: 0 }}>
+                    Login Password
+                  </label>
+                  {formData.password && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(formData.password);
+                        showSuccess("Password copied to clipboard!");
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#2563eb",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: 0,
+                      }}
+                    >
+                      <Copy size={12} />
+                      Copy Password
+                    </button>
+                  )}
+                </div>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showEditPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Leave empty to keep existing password"
+                    placeholder="Enter new password or leave current"
                     style={{
                       width: "100%",
                       padding: "10px 40px 10px 14px",
@@ -1331,11 +1462,13 @@ export default function UsersManagementPage() {
                       border: "1px solid #e2e8f0",
                       color: "#0f172a",
                       fontSize: "14px",
+                      fontFamily: showEditPassword ? "inherit" : "monospace",
                     }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowEditPassword(!showEditPassword)}
+                    title={showEditPassword ? "Hide password" : "Show password"}
                     style={{
                       position: "absolute",
                       right: "12px",
@@ -1353,11 +1486,100 @@ export default function UsersManagementPage() {
                     {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <p style={{ margin: "4px 0 0", fontSize: "11.5px", color: "#64748b" }}>
+                  💡 Current password is shown. You can view it anytime or type a new one to update.
+                </p>
               </div>
 
+              {/* Role & Status Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                    Account Role
+                  </label>
+                  <select
+                    value={formData.role}
+                    disabled={editingUser.role === "master_admin"}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      background: editingUser.role === "master_admin" ? "#f1f5f9" : "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <option value="client">🏢 Client Organization</option>
+                    <option value="admin">🛡️ Administrator</option>
+                    <option value="user">👥 Staff / Sub-Login</option>
+                    {editingUser.role === "master_admin" && (
+                      <option value="master_admin">👑 Master Admin (Permanent)</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                    Account Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    disabled={editingUser.role === "master_admin"}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <option value="active">🟢 Active</option>
+                    <option value="inactive">🔴 Inactive / Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Parent Client Selector (if role is user/staff) */}
+              {formData.role === "user" && (
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
+                    Assigned Parent Client
+                  </label>
+                  <select
+                    value={formData.parent_client_id}
+                    onChange={(e) => setFormData({ ...formData, parent_client_id: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <option value="">-- Select Parent Organization --</option>
+                    {clientOrgs.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.username}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* WhatsApp Sender Mode */}
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
-                  WhatsApp Sending Channel
+                  WhatsApp Sender Mode
                 </label>
                 <select
                   value={formData.whatsapp_mode}
@@ -1373,38 +1595,100 @@ export default function UsersManagementPage() {
                     fontWeight: 600,
                   }}
                 >
-                  <option value="company">🏢 Company Default Channel</option>
-                  <option value="personal">📱 Personal Meta API Key</option>
+                  <option value="company">🏢 Company Platform WhatsApp (+91 82339 57004)</option>
+                  <option value="personal">📱 Personal Meta Cloud API Key</option>
                 </select>
               </div>
 
+              {/* Personal Meta Credentials Section */}
               {formData.whatsapp_mode === "personal" && (
-                <div style={{ marginBottom: "18px", padding: "14px", background: "rgba(124, 58, 237, 0.04)", borderRadius: "12px", border: "1px solid rgba(124, 58, 237, 0.2)" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#7c3aed", marginBottom: "10px" }}>
-                    Personal Meta Cloud API Credentials
+                <div style={{ marginBottom: "18px", padding: "16px", background: "rgba(124, 58, 237, 0.04)", borderRadius: "12px", border: "1px solid rgba(124, 58, 237, 0.2)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#7c3aed" }}>
+                      Personal Meta Cloud API Credentials
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleTestMeta}
+                      disabled={testingMeta}
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: "8px",
+                        background: "#7c3aed",
+                        border: "none",
+                        color: "#ffffff",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Zap size={12} className={testingMeta ? "animate-spin" : ""} />
+                      {testingMeta ? "Testing..." : "Test Connection"}
+                    </button>
                   </div>
+
+                  {metaTestResult && (
+                    <div
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        marginBottom: "12px",
+                        fontSize: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: metaTestResult.success ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                        color: metaTestResult.success ? "#059669" : "#dc2626",
+                        border: `1px solid ${metaTestResult.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                      }}
+                    >
+                      {metaTestResult.success ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                      <span>{metaTestResult.message}</span>
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <input
-                      type="text"
-                      placeholder="Phone Number ID"
-                      value={formData.meta_phone_number_id}
-                      onChange={(e) => setFormData({ ...formData, meta_phone_number_id: e.target.value })}
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="WABA ID"
-                      value={formData.meta_waba_id}
-                      onChange={(e) => setFormData({ ...formData, meta_waba_id: e.target.value })}
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }}
-                    />
-                    <textarea
-                      placeholder="New System User Access Token (leave blank to keep current)"
-                      rows={2}
-                      value={formData.meta_access_token}
-                      onChange={(e) => setFormData({ ...formData, meta_access_token: e.target.value })}
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", resize: "none" }}
-                    />
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
+                        Phone Number ID
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 1404154399449473"
+                        value={formData.meta_phone_number_id}
+                        onChange={(e) => setFormData({ ...formData, meta_phone_number_id: e.target.value })}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", background: "#ffffff" }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
+                        WABA ID (WhatsApp Business Account ID)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 1915831806460496"
+                        value={formData.meta_waba_id}
+                        onChange={(e) => setFormData({ ...formData, meta_waba_id: e.target.value })}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", background: "#ffffff" }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
+                        Permanent Access Token
+                      </label>
+                      <textarea
+                        placeholder="Paste EAAB... Meta Permanent Access Token"
+                        rows={2}
+                        value={formData.meta_access_token}
+                        onChange={(e) => setFormData({ ...formData, meta_access_token: e.target.value })}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", resize: "none", background: "#ffffff" }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1441,7 +1725,7 @@ export default function UsersManagementPage() {
                     boxShadow: "0 4px 12px rgba(0, 34, 119, 0.25)",
                   }}
                 >
-                  {submitting ? "Saving..." : "Save Changes"}
+                  {submitting ? "Saving..." : "Save All Changes"}
                 </button>
               </div>
             </form>
