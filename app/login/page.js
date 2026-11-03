@@ -154,7 +154,7 @@ export default function LoginPage() {
                 color: "#001744",
               }}
             >
-              Assudani&apos;s <span style={{ color: "#2563eb" }}>WP Automation</span>
+              Assudani <span style={{ color: "#2563eb" }}>WA Automations</span>
             </h1>
             <p style={{ fontSize: "14px", color: "#64748b", margin: 0, fontWeight: "500" }}>
               Enterprise WhatsApp Cloud Marketing &amp; CRM Platform
@@ -483,14 +483,12 @@ export default function LoginPage() {
           gap: "12px",
         }}
       >
-        <span>&copy; 2026 Assudani&apos;s WP Automation. All rights reserved.</span>
+        <div>
+          <span>&copy; 2026 <strong>Assudani WA Automations</strong>. All rights reserved.</span>
+          <span style={{ margin: "0 8px", opacity: 0.4 }}>|</span>
+          <span>Designed &amp; Developed by <strong>Assudani Group</strong> &amp; <a href="https://piyushassudani.in" target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>piyushassudani.in</a></span>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <span
-            style={{ color: "#0f3ba8", fontWeight: "600" }}
-          >
-            Powered by Assudani&apos;s WP Automation
-          </span>
-          <span>&bull;</span>
           <Link
             href="/privacy"
             style={{ color: "#64748b", textDecoration: "none" }}

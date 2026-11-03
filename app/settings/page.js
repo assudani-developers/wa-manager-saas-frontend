@@ -289,7 +289,7 @@ export default function SettingsPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "10px" }}>
                     <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Verified Business Name</span>
                     <span style={{ fontSize: "13.5px", fontWeight: "600", color: "var(--text-primary)" }}>
-                      {metaHealth?.verified_name || "Assudani's WP Automation"}
+                      {metaHealth?.verified_name || "Assudani WA Automations"}
                     </span>
                   </div>
 
@@ -624,7 +624,7 @@ export default function SettingsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
               <div style={{ padding: "16px", background: "var(--bg-tertiary)", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
                 <div style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Edition</div>
-                <div style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)", marginTop: "4px" }}>Assudani&apos;s WP Automation V3.0 PRO</div>
+                <div style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)", marginTop: "4px" }}>Assudani WA Automations V3.0 PRO</div>
                 <div style={{ fontSize: "12px", color: "var(--secondary-accent)", marginTop: "4px" }}>● Production Active</div>
               </div>
 

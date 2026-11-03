@@ -5,8 +5,8 @@ import AppFooter from "./components/AppFooter";
 import { ToastProvider } from "./components/ToastProvider";
 
 export const metadata = {
-  title: "Assudani's WP Automation | Enterprise WhatsApp Marketing & CRM",
-  description: "Enterprise WhatsApp marketing, broadcast campaigns, real-time live chat, and customer CRM powered by Assudani's WP Automation.",
+  title: "Assudani WA Automations | Enterprise WhatsApp Marketing & CRM",
+  description: "Enterprise WhatsApp marketing, broadcast campaigns, real-time live chat, and customer CRM powered by Assudani WA Automations. Designed & developed by Assudani Group & piyushassudani.in",
   icons: {
     icon: "/logo.png",
     shortcut: "/favicon.ico",

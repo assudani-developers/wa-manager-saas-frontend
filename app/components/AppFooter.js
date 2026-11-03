@@ -38,17 +38,12 @@ export default function AppFooter() {
         />
         <span style={{ fontWeight: 500 }}>Meta Cloud API Active</span>
       </div>
-      <div style={{ textAlign: "center", color: "var(--text-secondary)" }}>
-        &copy; 2026 Assudani&apos;s WP Automation. All rights reserved.
+      <div style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "12px" }}>
+        &copy; 2026 <strong style={{ color: "var(--text-primary)" }}>Assudani WA Automations</strong>. All rights reserved.
+        <span style={{ margin: "0 8px", opacity: 0.4 }}>|</span>
+        <span>Designed &amp; Developed by <strong>Assudani Group</strong> &amp; <a href="https://piyushassudani.in" target="_blank" rel="noopener noreferrer" style={{ color: "var(--secondary-accent)", textDecoration: "none", fontWeight: 600 }}>piyushassudani.in</a></span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <span
-          className="footer-link"
-          style={{ fontWeight: 600, color: "var(--accent)" }}
-        >
-          Powered by Assudani&apos;s WP Automation
-        </span>
-        <span>&bull;</span>
         <a
           href="/privacy"
           target="_blank"

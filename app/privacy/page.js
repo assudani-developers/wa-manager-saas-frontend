@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p style={{ fontSize: "15px", color: "#94a3b8", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
-            How Assudani&apos;s WP Automation protects, manages, and safeguards client credentials and WhatsApp messaging communications.
+            How Assudani WA Automations protects, manages, and safeguards client credentials and WhatsApp messaging communications.
           </p>
           <div style={{ marginTop: "16px", fontSize: "12px", color: "#64748b" }}>
             Last Updated: November 2026 &bull; Effective Immediately

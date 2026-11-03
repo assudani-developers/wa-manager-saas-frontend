@@ -1,6 +1,7 @@
-# Assudani's WP Automation Frontend
+# Assudani WA Automations Frontend
 
-This is the web-based user interface for Assudani's WP Automation, built with Next.js and React. It provides a sleek, modern dashboard for managing contacts, sending campaigns, and replying to users.
+This is the web-based user interface for Assudani WA Automations, built with Next.js and React.
+Designed and Developed by Assudani Group & piyushassudani.in.
 
 ## Features
 
