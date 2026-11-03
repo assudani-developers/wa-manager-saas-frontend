@@ -24,7 +24,7 @@ export default function BrandLogo({ size = 36, showText = false, textClassName =
         }}
       >
         <img
-          src="/logo.png"
+          src="/logo.webp"
           alt="Assudani WA Automations Logo"
           width={size}
           height={size}

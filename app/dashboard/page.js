@@ -136,7 +136,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Top Cards Row 2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '20px' }}>
         {[
           { label: "CAMPAIGNS", value: totalCampaigns.toLocaleString(), sub: "Total Active", icon: <Megaphone size={20} color="#a855f7" />, bg: "#f3e8ff" },
           { label: "MESSAGES SENT", value: totalMessagesSent.toLocaleString(), sub: "All Time", icon: <Send size={20} color="#10b981" />, bg: "#d1fae5" },

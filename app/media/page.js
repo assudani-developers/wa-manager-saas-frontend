@@ -132,7 +132,7 @@ export default function MediaLibraryPage() {
             </p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "16px" }}>
             {media.map((item) => (
               <div key={item.id} className="ui-card animate-fade-in" style={{ padding: "0", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
                 <div style={{ aspectRatio: "1/1", background: "var(--bg-tertiary)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>

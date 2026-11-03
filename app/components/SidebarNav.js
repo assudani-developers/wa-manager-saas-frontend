@@ -32,7 +32,7 @@ export default function SidebarNav() {
       const user = userStr ? JSON.parse(userStr) : null;
       const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
       setIsMasterAdmin(isMaster);
-    } catch (e) {}
+    } catch (e) { }
   }, [pathname]);
 
   if (pathname === "/login") {
@@ -126,10 +126,9 @@ export default function SidebarNav() {
             const isActive =
               pathname === item.href || pathname?.startsWith(item.href + "/");
             return (
-              <Link key={item.href} href={item.href} title={item.label} style={{ textDecoration: "none" }}>
-                <div className={`nav-item ${isActive ? "active" : ""}`}>
+              <Link key={item.href} href={item.href} title={item.label} style={{ textDecoration: "none", outline: "none" }}>
+                <div className={`nav-item ${isActive ? "active" : ""}`} style={{ outline: "none" }}>
                   <item.icon size={21} strokeWidth={isActive ? 2.4 : 2} />
-                  <span className="nav-tooltip">{item.label}</span>
                 </div>
               </Link>
             );
@@ -138,10 +137,9 @@ export default function SidebarNav() {
 
         {/* Settings */}
         <div style={{ width: "100%", display: "flex", justifyContent: "center", marginTop: "6px" }}>
-          <Link href="/settings" title="Settings" style={{ textDecoration: "none" }}>
-            <div className={`nav-item ${pathname === "/settings" ? "active" : ""}`}>
+          <Link href="/settings" title="Settings" style={{ textDecoration: "none", outline: "none" }}>
+            <div className={`nav-item ${pathname === "/settings" ? "active" : ""}`} style={{ outline: "none" }}>
               <Settings size={21} strokeWidth={pathname === "/settings" ? 2.4 : 2} />
-              <span className="nav-tooltip">Settings</span>
             </div>
           </Link>
         </div>
@@ -153,7 +151,7 @@ export default function SidebarNav() {
           className="nav-item"
           title="Meta Cloud Health"
           onClick={() => setIsHealthModalOpen(true)}
-          style={{ cursor: "pointer", position: "relative" }}
+          style={{ cursor: "pointer", position: "relative", outline: "none" }}
         >
           <Activity size={20} />
           <span
@@ -168,7 +166,6 @@ export default function SidebarNav() {
               boxShadow: "0 0 6px #10b981",
             }}
           />
-          <span className="nav-tooltip">Meta Health</span>
         </div>
 
         {/* Logout */}
@@ -176,10 +173,9 @@ export default function SidebarNav() {
           className="nav-item logout-btn"
           title="Sign Out"
           onClick={handleLogout}
-          style={{ cursor: "pointer", margin: "4px 0" }}
+          style={{ cursor: "pointer", margin: "4px 0", outline: "none" }}
         >
           <LogOut size={20} />
-          <span className="nav-tooltip">Log Out</span>
         </div>
 
         <span className="nav-version">v2.4 Pro</span>

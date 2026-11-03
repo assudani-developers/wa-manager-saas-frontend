@@ -59,6 +59,7 @@ export default function UsersManagementPage() {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [testingMeta, setTestingMeta] = useState(false);
   const [metaTestResult, setMetaTestResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -314,7 +315,7 @@ export default function UsersManagementPage() {
 
   return (
     <div style={{ height: "100%", overflowY: "auto", width: "100%" }}>
-      <div style={{ padding: "32px 36px", maxWidth: "1360px", margin: "0 auto", width: "100%" }}>
+      <div className="users-page-container" style={{ padding: "28px 32px", maxWidth: "1360px", margin: "0 auto", width: "100%" }}>
       {/* Top Header Card */}
       <div
         style={{
@@ -427,7 +428,7 @@ export default function UsersManagementPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "16px",
           marginBottom: "24px",
         }}
@@ -1044,7 +1045,7 @@ export default function UsersManagementPage() {
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="e.g. kapilchaudhary"
+                  placeholder="e.g. client_username"
                   required
                   style={{
                     width: "100%",
@@ -1316,21 +1317,42 @@ export default function UsersManagementPage() {
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
                   Change Password (optional)
                 </label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Leave empty to keep existing password"
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: "10px",
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    color: "#0f172a",
-                    fontSize: "14px",
-                  }}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showEditPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Leave empty to keep existing password"
+                    style={{
+                      width: "100%",
+                      padding: "10px 40px 10px 14px",
+                      borderRadius: "10px",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      color: "#0f172a",
+                      fontSize: "14px",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: "#94a3b8",
+                      cursor: "pointer",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div style={{ marginBottom: "16px" }}>

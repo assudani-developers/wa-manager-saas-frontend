@@ -99,6 +99,7 @@ export default function SettingsPage() {
   const [teamLoading, setTeamLoading] = useState(false);
   const [newTeamUsername, setNewTeamUsername] = useState("");
   const [newTeamPassword, setNewTeamPassword] = useState("");
+  const [showTeamPassword, setShowTeamPassword] = useState(false);
   const [addingTeamMember, setAddingTeamMember] = useState(false);
 
   const loadTeam = () => {
@@ -739,7 +740,7 @@ export default function SettingsPage() {
                     type="text"
                     value={newTeamUsername}
                     onChange={(e) => setNewTeamUsername(e.target.value)}
-                    placeholder="e.g. staff_rahul"
+                    placeholder="e.g. staff_member"
                     className="form-input"
                     style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", fontSize: "13.5px" }}
                     required
@@ -749,15 +750,36 @@ export default function SettingsPage() {
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
                     Login Password
                   </label>
-                  <input
-                    type="password"
-                    value={newTeamPassword}
-                    onChange={(e) => setNewTeamPassword(e.target.value)}
-                    placeholder="Min 4 characters"
-                    className="form-input"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", fontSize: "13.5px" }}
-                    required
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showTeamPassword ? "text" : "password"}
+                      value={newTeamPassword}
+                      onChange={(e) => setNewTeamPassword(e.target.value)}
+                      placeholder="Min 4 characters"
+                      className="form-input"
+                      style={{ width: "100%", padding: "9px 36px 9px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", fontSize: "13.5px" }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowTeamPassword(!showTeamPassword)}
+                      style={{
+                        position: "absolute",
+                        right: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "var(--text-muted)",
+                        cursor: "pointer",
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {showTeamPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <button

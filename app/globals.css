@@ -59,6 +59,22 @@
   box-sizing: border-box;
 }
 
+p, span, h1, h2, h3, h4, h5, h6, td, th, div, label, a {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+input, textarea, select, button {
+  font-family: inherit;
+  font-size: 100%;
+}
+
+pre, code {
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 html {
   height: 100%;
   overflow: hidden !important;
@@ -125,9 +141,23 @@ body {
   text-decoration: none;
 }
 
+.sidebar-nav,
+.sidebar-nav *,
+.sidebar-nav a,
+.sidebar-nav div,
+.sidebar-nav button {
+  -webkit-tap-highlight-color: transparent !important;
+}
+
 .sidebar-nav a:focus,
-.sidebar-nav a:focus-visible {
+.sidebar-nav a:focus-visible,
+.sidebar-nav div:focus,
+.sidebar-nav div:focus-visible,
+.nav-item:focus,
+.nav-item:focus-visible,
+.nav-item:active {
   outline: none !important;
+  box-shadow: none !important;
 }
 
 .nav-item {
@@ -142,11 +172,13 @@ body {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 .nav-item:focus,
 .nav-item:focus-visible {
   outline: none !important;
+  box-shadow: none !important;
 }
 
 .nav-item:hover {
@@ -1388,6 +1420,30 @@ p, span, h1, h2, h3, h4, h5, h6, td, th {
   .btn-primary, .btn-secondary {
     white-space: nowrap !important;
   }
+
+  aside[aria-label="Notifications"] {
+    top: 10px !important;
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    max-width: 100% !important;
+  }
+}
+
+.campaign-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .users-page-container {
+    padding: 16px 12px !important;
+  }
+  .campaign-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
 }
 
 /* Extra small devices / Older Androids (<= 380px) */
@@ -1401,6 +1457,9 @@ p, span, h1, h2, h3, h4, h5, h6, td, th {
     height: 18px !important;
   }
   .page-container {
+    padding: 12px 8px !important;
+  }
+  .users-page-container {
     padding: 12px 8px !important;
   }
 }

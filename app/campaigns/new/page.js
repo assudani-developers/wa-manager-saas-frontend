@@ -18,13 +18,13 @@ export default function NewCampaignPage() {
   const [mediaFile, setMediaFile] = useState(null);
   const [selectedGalleryMedia, setSelectedGalleryMedia] = useState(null);
   const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
-  
+
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
-  
+
   const [contactLists, setContactLists] = useState([]);
   const [loadingLists, setLoadingLists] = useState(true);
-  
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -43,13 +43,13 @@ export default function NewCampaignPage() {
           api.get("/api/templates")
         ]);
         setContactLists(listsRes.data);
-        
+
         const approvedOnly = (templatesRes.data || []).filter(t => t.status === 'APPROVED');
         setTemplates(approvedOnly);
 
         api.get("/api/users/channel-config")
           .then((res) => setActiveChannel(res.data))
-          .catch(() => {});
+          .catch(() => { });
       } catch (err) {
         console.error("Failed to fetch data:", err);
         setError("Failed to load required data. Please refresh and try again.");
@@ -80,7 +80,7 @@ export default function NewCampaignPage() {
   }
 
   const previewBodyText = bodyComponent?.text
-    ? bodyComponent.text.replace(/\{\{1\}\}/g, "Rahul Sharma").replace(/\{\{2\}\}/g, "New Delhi").replace(/\{\{\d+\}\}/g, "...")
+    ? bodyComponent.text.replace(/\{\{1\}\}/g, "[Customer Name]").replace(/\{\{2\}\}/g, "[City]").replace(/\{\{\d+\}\}/g, "...")
     : "";
 
   const handleTemplateSelect = (e) => {
@@ -177,7 +177,7 @@ export default function NewCampaignPage() {
       <div className="page-content" style={{ display: "flex", gap: "28px", alignItems: "flex-start", maxWidth: "1280px" }}>
         <div className="ui-card" style={{ flex: 1, minWidth: 0, padding: "28px" }}>
           <form onSubmit={handleSubmit}>
-            {}
+            { }
             {error && (
               <div className="window-warning" style={{ marginBottom: "24px" }}>
                 <span className="window-warning-text">{error}</span>
@@ -191,7 +191,7 @@ export default function NewCampaignPage() {
               </div>
             )}
 
-            {}
+            { }
             {success && (
               <div style={{ padding: "16px", background: "var(--bubble-outbound)", border: "1px solid var(--secondary-accent-muted)", borderRadius: "12px", marginBottom: "24px", color: "var(--secondary-accent)", fontSize: "15px", fontWeight: "600" }}>
                 ✅ {success}
@@ -368,8 +368,8 @@ export default function NewCampaignPage() {
                           requiredMediaFormat === "IMAGE"
                             ? "image/*"
                             : requiredMediaFormat === "VIDEO"
-                            ? "video/*"
-                            : "application/pdf"
+                              ? "video/*"
+                              : "application/pdf"
                         }
                         onChange={(e) => {
                           const file = e.target.files[0] || null;

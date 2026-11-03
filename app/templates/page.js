@@ -112,7 +112,7 @@ export default function TemplateLibraryPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "20px" }}>
             {templates.map((template) => (
               <div key={template.id} className="ui-card animate-fade-in" style={{ display: "flex", flexDirection: "column", padding: "0" }}>
                 <div className="ui-card-header" style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>

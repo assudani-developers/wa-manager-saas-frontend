@@ -156,7 +156,7 @@ export default function NewTemplatePage() {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
               <div className="form-group">
                 <label className="form-label">Category</label>
                 <select

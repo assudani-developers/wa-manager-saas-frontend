@@ -9,9 +9,9 @@ export const metadata = {
   title: "Assudani WA Automations | Enterprise WhatsApp Marketing & CRM",
   description: "Enterprise WhatsApp marketing, broadcast campaigns, real-time live chat, and customer CRM powered by Assudani WA Automations. Designed & developed by Assudani Group & piyushassudani.in",
   icons: {
-    icon: "/logo.png",
+    icon: "/logo.webp",
     shortcut: "/favicon.ico",
-    apple: "/logo.png",
+    apple: "/logo.webp",
   },
 };
 

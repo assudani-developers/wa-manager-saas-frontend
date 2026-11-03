@@ -208,7 +208,7 @@ export default function ContactsPage() {
                     </button>
                   </div>
                 </div>
-                <div className="ui-card-subtitle" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "12px" }}>
+                <div className="ui-card-subtitle" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "12px", flexWrap: "wrap", gap: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                     <FileSpreadsheet size={16} />
                     Created: {format(new Date(list.created_at), "MMM d, yyyy")}

@@ -183,7 +183,7 @@ export default function LoginPage() {
               }}
             >
               <img
-                src="/logo.png"
+                src="/logo.webp"
                 alt="Assudani's WP Automation Logo"
                 style={{
                   width: "100%",

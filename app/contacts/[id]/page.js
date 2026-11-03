@@ -221,7 +221,7 @@ export default function ListContactsPage() {
             <form onSubmit={handleAddContact}>
               <div className="form-group">
                 <label className="form-label">Name</label>
-                <input type="text" className="form-input" value={newName} onChange={e => setNewName(e.target.value)} disabled={adding} placeholder="e.g., Rahul" />
+                <input type="text" className="form-input" value={newName} onChange={e => setNewName(e.target.value)} disabled={adding} placeholder="e.g., Contact Name" />
               </div>
               <div className="form-group">
                 <label className="form-label">Mobile Number *</label>
@@ -258,7 +258,7 @@ export default function ListContactsPage() {
             <form onSubmit={handleUpdateContact}>
               <div className="form-group">
                 <label className="form-label">Name</label>
-                <input type="text" className="form-input" value={editName} onChange={e => setEditName(e.target.value)} disabled={editing} placeholder="e.g., Rahul" />
+                <input type="text" className="form-input" value={editName} onChange={e => setEditName(e.target.value)} disabled={editing} placeholder="e.g., Contact Name" />
               </div>
               <div className="form-group">
                 <label className="form-label">Mobile Number *</label>
