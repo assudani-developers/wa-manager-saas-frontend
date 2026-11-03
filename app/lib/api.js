@@ -1,8 +1,6 @@
 import axios from "axios";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://wa-kapil.piyushassudani.in");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
 
 const api = axios.create({
   baseURL: API_URL,

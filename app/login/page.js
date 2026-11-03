@@ -40,7 +40,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "https://wa-kapil.piyushassudani.in").replace(/\/+$/, "");
 
     try {
       const res = await fetch(`${apiUrl}/api/auth/login`, {
