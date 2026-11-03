@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost:5001");
+  (typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://wa-kapil.piyushassudani.in");
 
 const api = axios.create({
   baseURL: API_URL,
