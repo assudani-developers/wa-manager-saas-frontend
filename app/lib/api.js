@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://morihix-wp.piyushassudani.in";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost:5001");
 
 const api = axios.create({
   baseURL: API_URL,

@@ -5,12 +5,12 @@ import AppFooter from "./components/AppFooter";
 import { ToastProvider } from "./components/ToastProvider";
 
 export const metadata = {
-  title: "Morihix Digital | Enterprise WhatsApp Marketing & CRM",
-  description: "Enterprise WhatsApp marketing, broadcast campaigns, real-time live chat, and customer CRM powered by Morihix Digital.",
+  title: "Assudani's WP Automation | Enterprise WhatsApp Marketing & CRM",
+  description: "Enterprise WhatsApp marketing, broadcast campaigns, real-time live chat, and customer CRM powered by Assudani's WP Automation.",
   icons: {
-    icon: "/icon.png",
+    icon: "/logo.png",
     shortcut: "/favicon.ico",
-    apple: "/icon.png",
+    apple: "/logo.png",
   },
 };
 

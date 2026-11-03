@@ -102,7 +102,7 @@ export default function SidebarNav() {
       {/* Desktop Vertical Sidebar (> 768px) */}
       <nav className="sidebar-nav">
         {/* Brand Mark */}
-        <Link href="/chat" style={{ textDecoration: "none", marginBottom: "16px" }} title="Morihix Digital">
+        <Link href="/chat" style={{ textDecoration: "none", marginBottom: "16px" }} title="Assudani's WP Automation">
           <BrandLogo size={42} iconOnly />
         </Link>
 

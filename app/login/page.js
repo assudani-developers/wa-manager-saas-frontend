@@ -40,7 +40,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://morihix-wp.piyushassudani.in";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
 
     try {
       const res = await fetch(`${apiUrl}/api/auth/login`, {
@@ -94,7 +94,7 @@ export default function LoginPage() {
           right: 0,
           bottom: 0,
           backgroundImage:
-            "radial-gradient(at 50% 10%, rgba(15, 59, 168, 0.08) 0%, transparent 60%), radial-gradient(at 80% 90%, rgba(217, 119, 6, 0.05) 0%, transparent 60%)",
+            "radial-gradient(at 50% 0%, rgba(0, 34, 119, 0.12) 0%, transparent 65%), radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.08) 0%, transparent 60%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -120,21 +120,22 @@ export default function LoginPage() {
           <div style={{ textAlign: "center", marginBottom: "28px" }}>
             <div
               style={{
-                width: "64px",
-                height: "64px",
+                width: "72px",
+                height: "72px",
                 margin: "0 auto 16px auto",
-                borderRadius: "16px",
+                borderRadius: "18px",
                 overflow: "hidden",
-                boxShadow: "0 8px 24px rgba(6, 18, 44, 0.25)",
-                backgroundColor: "#06122c",
+                boxShadow: "0 10px 28px rgba(0, 34, 119, 0.22)",
+                backgroundColor: "#001744",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                border: "2px solid rgba(255, 255, 255, 0.15)",
               }}
             >
               <img
-                src="/icon.png"
-                alt="Morihix Digital Logo"
+                src="/logo.png"
+                alt="Assudani's WP Automation Logo"
                 style={{
                   width: "100%",
                   height: "100%",
@@ -146,17 +147,17 @@ export default function LoginPage() {
 
             <h1
               style={{
-                fontSize: "24px",
+                fontSize: "25px",
                 fontWeight: "800",
-                letterSpacing: "-0.025em",
+                letterSpacing: "-0.03em",
                 margin: "0 0 6px 0",
-                color: "#0f172a",
+                color: "#001744",
               }}
             >
-              Morihix <span style={{ color: "#d97706" }}>Digital</span>
+              Assudani&apos;s <span style={{ color: "#2563eb" }}>WP Automation</span>
             </h1>
-            <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
-              WhatsApp Automation & CRM Console
+            <p style={{ fontSize: "14px", color: "#64748b", margin: 0, fontWeight: "500" }}>
+              Enterprise WhatsApp Cloud Marketing &amp; CRM Platform
             </p>
           </div>
 
@@ -383,7 +384,7 @@ export default function LoginPage() {
                 </label>
 
                 <a
-                  href="mailto:support@morihix.com"
+                  href="mailto:support@assudani.com"
                   style={{
                     color: "#0f3ba8",
                     textDecoration: "none",
@@ -482,16 +483,13 @@ export default function LoginPage() {
           gap: "12px",
         }}
       >
-        <span>&copy; 2026 Morihix Digital. All rights reserved.</span>
+        <span>&copy; 2026 Assudani&apos;s WP Automation. All rights reserved.</span>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <a
-            href="https://morihix.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#0f3ba8", textDecoration: "none", fontWeight: "600" }}
+          <span
+            style={{ color: "#0f3ba8", fontWeight: "600" }}
           >
-            Powered by Morihix Digital
-          </a>
+            Powered by Assudani&apos;s WP Automation
+          </span>
           <span>&bull;</span>
           <Link
             href="/privacy"

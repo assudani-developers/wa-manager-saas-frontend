@@ -1,6 +1,6 @@
-# Morihix Digital Frontend
+# Assudani's WP Automation Frontend
 
-This is the web-based user interface for Morihix Digital, built with Next.js and React. It provides a sleek, modern dashboard for managing contacts, sending campaigns, and replying to users.
+This is the web-based user interface for Assudani's WP Automation, built with Next.js and React. It provides a sleek, modern dashboard for managing contacts, sending campaigns, and replying to users.
 
 ## Features
 
@@ -20,7 +20,7 @@ This is the web-based user interface for Morihix Digital, built with Next.js and
 2. **API Configuration:**
    Ensure that the backend API URL is configured via environment variables (`NEXT_PUBLIC_API_URL`) or in `app/lib/api.js`.
    ```bash
-   NEXT_PUBLIC_API_URL=https://morihix-wp.piyushassudani.in
+   NEXT_PUBLIC_API_URL=http://localhost:5001
    ```
 
 3. **Run the development server:**

@@ -1,6 +1,8 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || "https://morihix-wp.piyushassudani.in";
+const SOCKET_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost:5001");
 
 let socket = null;
 

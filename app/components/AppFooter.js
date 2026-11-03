@@ -39,18 +39,15 @@ export default function AppFooter() {
         <span style={{ fontWeight: 500 }}>Meta Cloud API Active</span>
       </div>
       <div style={{ textAlign: "center", color: "var(--text-secondary)" }}>
-        &copy; 2026 Morihix Digital. All rights reserved.
+        &copy; 2026 Assudani&apos;s WP Automation. All rights reserved.
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <a
-          href="https://morihix.com"
-          target="_blank"
-          rel="noopener noreferrer"
+        <span
           className="footer-link"
           style={{ fontWeight: 600, color: "var(--accent)" }}
         >
-          Powered by Morihix Digital
-        </a>
+          Powered by Assudani&apos;s WP Automation
+        </span>
         <span>&bull;</span>
         <a
           href="/privacy"

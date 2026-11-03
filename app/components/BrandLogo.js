@@ -14,18 +14,18 @@ export default function BrandLogo({ size = 36, showText = false, textClassName =
           minWidth: `${size}px`,
           minHeight: `${size}px`,
           borderRadius: `${radius}px`,
-          boxShadow: "0 4px 12px rgba(10, 28, 68, 0.25)",
+          boxShadow: "0 4px 14px rgba(0, 34, 119, 0.25)",
           overflow: "hidden",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#06122c",
+          backgroundColor: "#001744",
           flexShrink: 0,
         }}
       >
         <img
-          src="/icon.png"
-          alt="Morihix Digital Logo"
+          src="/logo.png"
+          alt="Assudani's WP Automation Logo"
           width={size}
           height={size}
           style={{
@@ -41,7 +41,7 @@ export default function BrandLogo({ size = 36, showText = false, textClassName =
         <div style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.15 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ fontSize: "16px", fontWeight: "800", letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
-              Morihix <span style={{ color: "#d97706" }}>Digital</span>
+              Assudani&apos;s <span style={{ color: "var(--accent)" }}>WP Automation</span>
             </span>
             <span
               style={{
@@ -49,18 +49,18 @@ export default function BrandLogo({ size = 36, showText = false, textClassName =
                 fontWeight: "700",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
-                padding: "2px 5px",
+                padding: "2px 6px",
                 borderRadius: "4px",
-                background: "rgba(217, 119, 6, 0.12)",
-                color: "#d97706",
-                border: "1px solid rgba(217, 119, 6, 0.2)",
+                background: "rgba(15, 59, 168, 0.12)",
+                color: "var(--accent)",
+                border: "1px solid rgba(15, 59, 168, 0.25)",
               }}
             >
               PRO
             </span>
           </div>
           <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "500", marginTop: "2px" }}>
-            WhatsApp Automation & CRM
+            WhatsApp Marketing &amp; CRM
           </span>
         </div>
       )}

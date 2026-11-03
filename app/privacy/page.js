@@ -59,10 +59,10 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p style={{ fontSize: "15px", color: "#94a3b8", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
-            How Morihix Digital protects, manages, and safeguards client credentials and WhatsApp messaging communications.
+            How Assudani&apos;s WP Automation protects, manages, and safeguards client credentials and WhatsApp messaging communications.
           </p>
           <div style={{ marginTop: "16px", fontSize: "12px", color: "#64748b" }}>
-            Last Updated: October 2026 &bull; Effective Immediately
+            Last Updated: November 2026 &bull; Effective Immediately
           </div>
         </div>
       </header>
@@ -81,10 +81,10 @@ export default function PrivacyPage() {
         >
           <section style={{ marginBottom: "32px" }}>
             <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <Lock size={20} color="#059669" /> 1. Overview & Commitment
+              <Lock size={20} color="#059669" /> 1. Overview &amp; Commitment
             </h2>
             <p style={{ margin: 0, fontSize: "14px" }}>
-              Morihix Digital provides enterprise-grade WhatsApp Cloud API marketing, CRM synchronization, and automated communication solutions. We respect the privacy of our business clients and their customers, complying with applicable data protection laws and Meta Platform Terms.
+              Assudani&apos;s WP Automation provides enterprise-grade WhatsApp Cloud API marketing, CRM synchronization, and automated communication solutions. We respect the privacy of our business clients and their customers, complying with applicable data protection laws and Meta Platform Terms.
             </p>
           </section>
 
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
 
           <section style={{ marginBottom: "32px" }}>
             <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <CheckCircle2 size={20} color="#059669" /> 3. Data Protection & Security
+              <CheckCircle2 size={20} color="#059669" /> 3. Data Protection &amp; Security
             </h2>
             <p style={{ margin: 0, fontSize: "14px" }}>
               All API communications are encrypted via HTTPS/TLS 1.3 in transit. Passwords are cryptographically hashed using standard bcrypt hashing algorithms. Access tokens and Meta Cloud credentials are encrypted and stored within isolated server environments.
@@ -113,7 +113,7 @@ export default function PrivacyPage() {
               <Eye size={20} color="#059669" /> 4. No Third-Party Selling
             </h2>
             <p style={{ margin: 0, fontSize: "14px" }}>
-              Morihix Digital does not sell, rent, or monetize client contact lists or customer communications. Data is solely processed to facilitate verified WhatsApp Cloud API broadcasts and live chat operations.
+              Assudani&apos;s WP Automation does not sell, rent, or monetize client contact lists or customer communications. Data is solely processed to facilitate verified WhatsApp Cloud API broadcasts and live chat operations.
             </p>
           </section>
 
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
               5. Contact Us
             </h2>
             <p style={{ margin: 0, fontSize: "14px" }}>
-              For questions regarding this privacy policy or data inquiries, reach out to our team at <strong>support@morihix.com</strong>.
+              For questions regarding this privacy policy or data inquiries, reach out to our team at <strong>support@assudani.com</strong>.
             </p>
           </section>
         </div>

@@ -289,7 +289,7 @@ export default function SettingsPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "10px" }}>
                     <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Verified Business Name</span>
                     <span style={{ fontSize: "13.5px", fontWeight: "600", color: "var(--text-primary)" }}>
-                      {metaHealth?.verified_name || "Morihix Digital"}
+                      {metaHealth?.verified_name || "Assudani's WP Automation"}
                     </span>
                   </div>
 
@@ -522,7 +522,7 @@ export default function SettingsPage() {
                   <span style={{ fontSize: "12.5px", fontWeight: "600", color: "var(--text-primary)" }}>Callback URL</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy("https://morihix-wp.piyushassudani.in/webhook", "webhook")}
+                    onClick={() => handleCopy(`${(process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/+$/, "")}/webhook`, "webhook")}
                     className="btn-secondary"
                     style={{ fontSize: "11px", padding: "4px 10px", display: "inline-flex", alignItems: "center", gap: "4px" }}
                   >
@@ -531,7 +531,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 <code style={{ fontSize: "13px", color: "var(--accent)", wordBreak: "break-all" }}>
-                  https://morihix-wp.piyushassudani.in/webhook
+                  {typeof window !== "undefined" ? `${(process.env.NEXT_PUBLIC_API_URL || window.location.origin).replace(/\/+$/, "")}/webhook` : "https://api.yourdomain.com/webhook"}
                 </code>
               </div>
 
@@ -541,7 +541,7 @@ export default function SettingsPage() {
                   <span style={{ fontSize: "12.5px", fontWeight: "600", color: "var(--text-primary)" }}>Verify Token</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy("morihix_wp_verify_token_2026", "token")}
+                    onClick={() => handleCopy("assudani_wp_verify_token_2026", "token")}
                     className="btn-secondary"
                     style={{ fontSize: "11px", padding: "4px 10px", display: "inline-flex", alignItems: "center", gap: "4px" }}
                   >
@@ -550,7 +550,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 <code style={{ fontSize: "13px", color: "var(--text-primary)" }}>
-                  morihix_wp_verify_token_2026
+                  assudani_wp_verify_token_2026
                 </code>
               </div>
 
@@ -560,7 +560,7 @@ export default function SettingsPage() {
                   <span style={{ fontSize: "12.5px", fontWeight: "600", color: "var(--text-primary)" }}>Privacy Policy URL (Meta App Review)</span>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <a
-                      href="https://morihix-wp.piyushassudani.in/privacy"
+                      href="/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-secondary"
@@ -571,7 +571,7 @@ export default function SettingsPage() {
                     </a>
                     <button
                       type="button"
-                      onClick={() => handleCopy("https://morihix-wp.piyushassudani.in/privacy", "privacy")}
+                      onClick={() => handleCopy(typeof window !== "undefined" ? `${window.location.origin}/privacy` : "/privacy", "privacy")}
                       className="btn-secondary"
                       style={{ fontSize: "11px", padding: "4px 10px", display: "inline-flex", alignItems: "center", gap: "4px" }}
                     >
@@ -581,7 +581,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <code style={{ fontSize: "13px", color: "var(--accent)", wordBreak: "break-all" }}>
-                  https://morihix-wp.piyushassudani.in/privacy
+                  {typeof window !== "undefined" ? `${window.location.origin}/privacy` : "/privacy"}
                 </code>
               </div>
 
@@ -624,8 +624,8 @@ export default function SettingsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
               <div style={{ padding: "16px", background: "var(--bg-tertiary)", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
                 <div style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Edition</div>
-                <div style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)", marginTop: "4px" }}>Morihix V2.4 PRO</div>
-                <div style={{ fontSize: "12px", color: "var(--secondary-accent)", marginTop: "4px" }}>● Production Cloud Active</div>
+                <div style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)", marginTop: "4px" }}>Assudani&apos;s WP Automation V3.0 PRO</div>
+                <div style={{ fontSize: "12px", color: "var(--secondary-accent)", marginTop: "4px" }}>● Production Active</div>
               </div>
 
               <div style={{ padding: "16px", background: "var(--bg-tertiary)", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
