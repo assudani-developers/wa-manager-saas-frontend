@@ -1595,7 +1595,7 @@ export default function UsersManagementPage() {
                     fontWeight: 600,
                   }}
                 >
-                  <option value="company">🏢 Company Platform WhatsApp (+91 82339 57004)</option>
+                  <option value="company">🏢 Company Default WhatsApp Channel</option>
                   <option value="personal">📱 Personal Meta Cloud API Key</option>
                 </select>
               </div>
