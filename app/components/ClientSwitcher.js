@@ -5,6 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { Users, Eye, X, ChevronDown, Check, Building, Smartphone, ShieldCheck, ArrowRight } from "lucide-react";
 import { getClientsDropdown } from "../lib/api";
 
+let cachedClientsList = null;
+let lastClientsListFetch = 0;
+
 export default function ClientSwitcher() {
   const pathname = usePathname();
   const router = useRouter();
@@ -36,15 +39,23 @@ export default function ClientSwitcher() {
       setActiveClientMode(savedClientMode);
 
       if (isMaster) {
-        setLoading(true);
-        getClientsDropdown()
-          .then((res) => {
-            setClients(res.data.clients || []);
-          })
-          .catch((err) => {
-            console.warn("Could not load clients dropdown:", err.message);
-          })
-          .finally(() => setLoading(false));
+        const now = Date.now();
+        if (cachedClientsList && now - lastClientsListFetch < 60000) {
+          setClients(cachedClientsList);
+        } else {
+          setLoading(true);
+          getClientsDropdown()
+            .then((res) => {
+              const list = res.data.clients || [];
+              cachedClientsList = list;
+              lastClientsListFetch = Date.now();
+              setClients(list);
+            })
+            .catch((err) => {
+              console.warn("Could not load clients dropdown:", err.message);
+            })
+            .finally(() => setLoading(false));
+        }
       }
     } catch (e) {}
   }, [pathname]);
