@@ -26,20 +26,78 @@ export default function ChatPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [activeClientId, setActiveClientId] = useState(null);
+  const [adminScope, setAdminScope] = useState("all");
+  const [clientsList, setClientsList] = useState([]);
 
   const { showSuccess, showError } = useToast();
 
-  // Fetch contacts
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const u = localStorage.getItem("user");
+      if (u) setCurrentUser(JSON.parse(u));
+      setActiveClientId(localStorage.getItem("active_client_id"));
+    }
+  }, []);
+
+  const isMasterAdmin = currentUser?.role === "master_admin" && !activeClientId;
+
+  useEffect(() => {
+    if (isMasterAdmin) {
+      import("../lib/api").then(({ getClientsDropdown }) => {
+        getClientsDropdown()
+          .then((res) => setClientsList(res.data || []))
+          .catch((err) => console.error("Failed to load clients dropdown:", err));
+      });
+    }
+  }, [isMasterAdmin]);
+
+  // Fetch contacts with multi-tenant filtering
   const fetchContacts = useCallback(async () => {
     try {
-      const res = await getContacts();
+      const params = {};
+      if (adminScope !== "all") {
+        params.scope = adminScope;
+      }
+      const res = await getContacts(params);
       setContacts(res.data);
     } catch (err) {
       console.error("Failed to fetch contacts:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminScope]);
+
+  // Assign an unassigned contact to a client
+  const handleAssignContact = async (contactId, userId) => {
+    try {
+      const { assignContact } = await import("../lib/api");
+      const res = await assignContact(contactId, userId);
+      const updatedContact = res.data.contact;
+
+      setContacts((prev) =>
+        prev.map((c) =>
+          c.id === contactId
+            ? { ...c, user_id: updatedContact.user_id, client_owner_name: updatedContact.client_owner_name }
+            : c
+        )
+      );
+
+      if (selectedContact?.id === contactId) {
+        setSelectedContact((prev) => ({
+          ...prev,
+          user_id: updatedContact.user_id,
+          client_owner_name: updatedContact.client_owner_name,
+        }));
+      }
+
+      showSuccess(res.data.message || "Contact assignment updated.");
+    } catch (err) {
+      console.error("Failed to assign contact:", err);
+      showError(err.response?.data?.error || "Failed to assign contact.");
+    }
+  };
 
   // Fetch messages for a contact
   const fetchMessages = useCallback(async (contactId) => {
@@ -125,6 +183,17 @@ export default function ChatPage() {
     const socket = getSocket();
 
     const handleNewMessage = (msg) => {
+      // Multi-tenant check: if client view or client login, ignore messages of other clients or unassigned
+      if (!isMasterAdmin) {
+        const effectiveId = activeClientId || currentUser?.id;
+        if (msg.contact_user_id && effectiveId && String(msg.contact_user_id) !== String(effectiveId)) {
+          return; // Ignore other client's inbound messages
+        }
+        if (!msg.contact_user_id) {
+          return; // Direct inbound stranger message, client should not see
+        }
+      }
+
       // Update messages if viewing this contact's chat
       const isSelectedContact =
         selectedContact &&
@@ -276,6 +345,9 @@ export default function ChatPage() {
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
           loading={loading}
+          isMasterAdmin={isMasterAdmin}
+          adminScope={adminScope}
+          onScopeChange={setAdminScope}
         />
       </div>
 
@@ -291,6 +363,9 @@ export default function ChatPage() {
             onMessageDeleted={handleMessageDeleted}
             onDeleteContact={handleDeleteContact}
             onBack={() => setSelectedContact(null)}
+            isMasterAdmin={isMasterAdmin}
+            clientsList={clientsList}
+            onAssignContact={handleAssignContact}
           />
         ) : (
           <div className="chat-window" style={{ flex: 1, width: "100%", height: "100%" }}>

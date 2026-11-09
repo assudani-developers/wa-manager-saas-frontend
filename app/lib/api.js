@@ -45,9 +45,11 @@ export const normalizeMediaUrl = (url) => {
   return url;
 };
 
-export const getContacts = () => api.get("/api/contacts");
+export const getContacts = (params) => api.get("/api/contacts", { params });
 
 export const getContact = (id) => api.get(`/api/contacts/${id}`);
+
+export const assignContact = (contactId, userId) => api.put(`/api/contacts/${contactId}/assign`, { user_id: userId });
 
 export const getAccountHealth = () => api.get("/api/account-health");
 

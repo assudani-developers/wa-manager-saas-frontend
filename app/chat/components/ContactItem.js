@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 
-export default function ContactItem({ contact, isActive, onClick }) {
+export default function ContactItem({ contact, isActive, onClick, showOwnerBadge = false }) {
   const getInitials = () => {
     if (contact.name) {
       return contact.name
@@ -39,11 +39,48 @@ export default function ContactItem({ contact, isActive, onClick }) {
       <div className="contact-avatar">{getInitials()}</div>
 
       <div className="contact-info">
-        <div className="contact-name-row">
-          <span className="contact-name">
-            {contact.name || contact.phone_number}
-          </span>
-          <span className="contact-time">
+        <div className="contact-name-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0, overflow: "hidden" }}>
+            <span className="contact-name" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {contact.name || contact.phone_number}
+            </span>
+            {showOwnerBadge && (
+              contact.client_owner_name ? (
+                <span
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: "600",
+                    padding: "1px 6px",
+                    borderRadius: "4px",
+                    background: "rgba(59, 130, 246, 0.12)",
+                    color: "#2563eb",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                  title={`Assigned to client: ${contact.client_owner_name}`}
+                >
+                  {contact.client_owner_name}
+                </span>
+              ) : (
+                <span
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: "600",
+                    padding: "1px 6px",
+                    borderRadius: "4px",
+                    background: "rgba(245, 158, 11, 0.12)",
+                    color: "#d97706",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                  title="Unprompted stranger incoming message"
+                >
+                  Direct Inbound
+                </span>
+              )
+            )}
+          </div>
+          <span className="contact-time" style={{ flexShrink: 0, marginLeft: "6px" }}>
             {formatTime(contact.last_message_time)}
           </span>
         </div>
