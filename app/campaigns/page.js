@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Megaphone, Trash2, Zap } from "lucide-react";
-import { getCampaigns, deleteCampaign } from "../lib/api";
+import { Plus, Megaphone, Trash2, Zap, Filter } from "lucide-react";
+import api, { getCampaigns, deleteCampaign } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { format } from "date-fns";
 import { useToast } from "../components/ToastProvider";
@@ -14,10 +14,38 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [liveEvent, setLiveEvent] = useState(null);
 
+  // Master Admin client filtering
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+  const [adminClients, setAdminClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState("all");
+
+  useEffect(() => {
+    try {
+      const role = localStorage.getItem("user_role");
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const isMaster =
+        role === "master_admin" ||
+        user?.role === "master_admin" ||
+        user?.username?.toLowerCase() === "piyushassudani";
+      setIsMasterAdmin(isMaster);
+      if (isMaster) {
+        api
+          .get("/api/billing/admin/clients")
+          .then((res) => setAdminClients(res.data?.clients || []))
+          .catch(() => {});
+      }
+    } catch (e) {}
+  }, []);
+
   const fetchCampaigns = async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
-      const res = await getCampaigns();
+      const params = {};
+      if (selectedClientId && selectedClientId !== "all") {
+        params.client_id = selectedClientId;
+      }
+      const res = await api.get("/api/campaigns", { params });
       setCampaigns(res.data || []);
     } catch (err) {
       console.error("Failed to fetch campaigns:", err);
@@ -28,7 +56,7 @@ export default function CampaignsPage() {
 
   useEffect(() => {
     fetchCampaigns(false);
-  }, []);
+  }, [selectedClientId]);
 
   // Real-time socket updates for campaigns list
   useEffect(() => {
@@ -67,7 +95,7 @@ export default function CampaignsPage() {
       socket.off("campaign_progress", handleCampaignProgress);
       socket.off("message_status", handleMessageStatus);
     };
-  }, []);
+  }, [selectedClientId]);
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this campaign?")) return;
@@ -83,9 +111,18 @@ export default function CampaignsPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+      <div
+        className="page-header"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+        }}
+      >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             <h1 className="page-title" style={{ margin: 0 }}>Campaigns</h1>
             <div
               style={{
@@ -119,10 +156,51 @@ export default function CampaignsPage() {
           </p>
         </div>
 
-        <Link href="/campaigns/new" className="btn-primary">
-          <Plus size={18} />
-          New Campaign
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Master Admin Client-Wise Selector */}
+          {isMasterAdmin && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#fff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "8px",
+                padding: "6px 12px",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              }}
+            >
+              <Filter size={15} color="#64748b" />
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#64748b" }}>Client:</span>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                style={{
+                  border: "none",
+                  outline: "none",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  background: "transparent",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="all">🏢 All Clients (Global Overview)</option>
+                {adminClients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    👤 {client.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <Link href="/campaigns/new" className="btn-primary">
+            <Plus size={18} />
+            New Campaign
+          </Link>
+        </div>
       </div>
 
       {liveEvent && (
@@ -185,17 +263,14 @@ export default function CampaignsPage() {
                 marginBottom: "8px",
               }}
             >
-              No campaigns yet
+              No campaigns found
             </h2>
             <p style={{ fontSize: "14px", maxWidth: "400px", lineHeight: 1.6 }}>
-              Create your first campaign by uploading an Excel file with phone
-              numbers and selecting a message template.
+              {selectedClientId !== "all"
+                ? "This client has not created any broadcast campaigns yet."
+                : "Create your first campaign by uploading an Excel file with phone numbers and selecting a message template."}
             </p>
-            <Link
-              href="/campaigns/new"
-              className="btn-primary"
-              style={{ marginTop: "24px" }}
-            >
+            <Link href="/campaigns/new" className="btn-primary" style={{ marginTop: "24px" }}>
               <Plus size={18} />
               Create Campaign
             </Link>
@@ -203,9 +278,30 @@ export default function CampaignsPage() {
         ) : (
           <div className="campaign-grid">
             {campaigns.map((campaign) => (
-              <div key={campaign.id} className="ui-card animate-fade-in" style={{ display: "flex", flexDirection: "column" }}>
+              <div
+                key={campaign.id}
+                className="ui-card animate-fade-in"
+                style={{ display: "flex", flexDirection: "column" }}
+              >
                 <div className="ui-card-header">
-                  <h3 className="ui-card-title">{campaign.name}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <h3 className="ui-card-title">{campaign.name}</h3>
+                    {isMasterAdmin && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          padding: "2px 8px",
+                          borderRadius: "10px",
+                          background: "rgba(59, 130, 246, 0.12)",
+                          color: "#2563eb",
+                          fontWeight: 700,
+                          width: "fit-content",
+                        }}
+                      >
+                        👤 Client: {campaign.client_username || "Direct Admin"}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     {campaign.status === "scheduled" && (
                       <span
@@ -241,7 +337,20 @@ export default function CampaignsPage() {
                 </div>
 
                 {campaign.status === "scheduled" && campaign.scheduled_at && (
-                  <div style={{ marginTop: "8px", padding: "6px 10px", background: "rgba(124, 58, 237, 0.08)", borderRadius: "8px", fontSize: "12px", color: "#7c3aed", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      padding: "6px 10px",
+                      background: "rgba(124, 58, 237, 0.08)",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "#7c3aed",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
                     <span>⏰ Auto-dispatch at:</span>
                     <span>{format(new Date(campaign.scheduled_at), "MMM d, yyyy 'at' h:mm a")}</span>
                   </div>
@@ -266,8 +375,25 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid var(--border-color)", textAlign: "center" }}>
-                  <Link href={`/campaigns/${campaign.id}`} style={{ color: "var(--accent)", fontWeight: 600, fontSize: "14px", textDecoration: "none", display: "inline-block", width: "100%" }}>
+                <div
+                  style={{
+                    marginTop: "20px",
+                    paddingTop: "16px",
+                    borderTop: "1px solid var(--border-color)",
+                    textAlign: "center",
+                  }}
+                >
+                  <Link
+                    href={`/campaigns/${campaign.id}`}
+                    style={{
+                      color: "var(--accent)",
+                      fontWeight: 600,
+                      fontSize: "14px",
+                      textDecoration: "none",
+                      display: "inline-block",
+                      width: "100%",
+                    }}
+                  >
                     View Recipients →
                   </Link>
                 </div>

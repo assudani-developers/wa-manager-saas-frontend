@@ -22,6 +22,9 @@ export default function ChatSidebar({
   isMasterAdmin = false,
   adminScope = "all",
   onScopeChange,
+  clientsList = [],
+  adminClientFilter = "all",
+  onClientFilterChange,
 }) {
   return (
     <aside className="chat-sidebar">
@@ -107,6 +110,46 @@ export default function ChatSidebar({
             >
               Direct Inbound
             </button>
+          </div>
+        )}
+
+        {isMasterAdmin && clientsList && clientsList.length > 0 && (
+          <div style={{ marginBottom: "10px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "var(--bg-secondary, #f1f5f9)",
+                padding: "5px 8px",
+                borderRadius: "6px",
+                fontSize: "11px",
+                fontWeight: 600,
+              }}
+            >
+              <span style={{ color: "#64748b" }}>Client:</span>
+              <select
+                value={adminClientFilter}
+                onChange={(e) => onClientFilterChange?.(e.target.value)}
+                style={{
+                  border: "none",
+                  outline: "none",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  background: "transparent",
+                  cursor: "pointer",
+                  flex: 1,
+                }}
+              >
+                <option value="all">All Clients</option>
+                {clientsList.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.username}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 

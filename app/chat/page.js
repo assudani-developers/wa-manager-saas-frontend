@@ -29,6 +29,7 @@ export default function ChatPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeClientId, setActiveClientId] = useState(null);
   const [adminScope, setAdminScope] = useState("all");
+  const [adminClientFilter, setAdminClientFilter] = useState("all");
   const [clientsList, setClientsList] = useState([]);
 
   const { showSuccess, showError } = useToast();
@@ -67,6 +68,9 @@ export default function ChatPage() {
       if (adminScope !== "all") {
         params.scope = adminScope;
       }
+      if (adminClientFilter && adminClientFilter !== "all") {
+        params.client_id = adminClientFilter;
+      }
       const res = await getContacts(params);
       setContacts(res.data);
     } catch (err) {
@@ -74,7 +78,7 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [adminScope]);
+  }, [adminScope, adminClientFilter]);
 
   // Assign an unassigned contact to a client
   const handleAssignContact = async (contactId, userId) => {
@@ -358,6 +362,9 @@ export default function ChatPage() {
           isMasterAdmin={isMasterAdmin}
           adminScope={adminScope}
           onScopeChange={setAdminScope}
+          clientsList={clientsList}
+          adminClientFilter={adminClientFilter}
+          onClientFilterChange={setAdminClientFilter}
         />
       </div>
 

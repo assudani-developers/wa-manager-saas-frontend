@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Upload, Users, FileSpreadsheet, X, CheckCircle2, Trash2, Plus } from "lucide-react";
+import { Upload, Users, FileSpreadsheet, X, CheckCircle2, Trash2, Plus, Filter } from "lucide-react";
 import Link from "next/link";
 import api, { deleteContactList } from "../lib/api";
 import { getSocket } from "../lib/socket";
@@ -15,6 +15,30 @@ export default function ContactsPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualListName, setManualListName] = useState("");
+
+  // Master Admin client filtering
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+  const [adminClients, setAdminClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState("all");
+
+  useEffect(() => {
+    try {
+      const role = localStorage.getItem("user_role");
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const isMaster =
+        role === "master_admin" ||
+        user?.role === "master_admin" ||
+        user?.username?.toLowerCase() === "piyushassudani";
+      setIsMasterAdmin(isMaster);
+      if (isMaster) {
+        api
+          .get("/api/billing/admin/clients")
+          .then((res) => setAdminClients(res.data?.clients || []))
+          .catch(() => {});
+      }
+    } catch (e) {}
+  }, []);
   
   
   const fileInputRef = useRef(null);
@@ -27,8 +51,12 @@ export default function ContactsPage() {
 
   const fetchLists = async () => {
     try {
-      const res = await api.get("/api/contact_lists");
-      setLists(res.data);
+      const params = {};
+      if (selectedClientId && selectedClientId !== "all") {
+        params.client_id = selectedClientId;
+      }
+      const res = await api.get("/api/contact_lists", { params });
+      setLists(res.data || []);
     } catch (err) {
       console.error("Failed to fetch contact lists:", err);
     } finally {
@@ -38,7 +66,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     fetchLists();
-  }, []);
+  }, [selectedClientId]);
 
   // Real-time socket updates for contact lists
   useEffect(() => {
@@ -157,9 +185,53 @@ export default function ContactsPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Contact Lists</h1>
-        <div style={{ display: "flex", gap: "12px" }}>
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 className="page-title" style={{ margin: 0 }}>Contact Lists</h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>
+            Manage saved contact sheets and Excel lists.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {isMasterAdmin && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#fff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "8px",
+                padding: "6px 12px",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              }}
+            >
+              <Filter size={15} color="#64748b" />
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#64748b" }}>Client:</span>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                style={{
+                  border: "none",
+                  outline: "none",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  background: "transparent",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="all">🏢 All Clients (Global Overview)</option>
+                {adminClients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    👤 {client.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button 
             className="btn-secondary" 
             onClick={() => setShowManualModal(true)}
@@ -209,7 +281,24 @@ export default function ContactsPage() {
             {lists.map((list) => (
               <div key={list.id} className="ui-card animate-fade-in">
                 <div className="ui-card-header">
-                  <h3 className="ui-card-title">{list.name}</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <h3 className="ui-card-title">{list.name}</h3>
+                    {isMasterAdmin && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          padding: "2px 8px",
+                          borderRadius: "10px",
+                          background: "rgba(59, 130, 246, 0.12)",
+                          color: "#2563eb",
+                          fontWeight: 700,
+                          width: "fit-content",
+                        }}
+                      >
+                        👤 Client: {list.client_username || "Direct Admin"}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div className="ui-card-badge">
                       {list.member_count || 0} Contacts
