@@ -46,6 +46,8 @@ export default function ContactsPage() {
   const [file, setFile] = useState(null);
   const [dragover, setDragover] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -73,10 +75,35 @@ export default function ContactsPage() {
     const socket = getSocket();
     const handleUpdate = () => fetchLists();
 
+    const handleCreated = (data) => {
+      if (data?.list) {
+        setLists((prev) => {
+          if (prev.some((l) => l.id === data.list.id)) return prev;
+          return [data.list, ...prev];
+        });
+      } else {
+        fetchLists();
+      }
+    };
+
+    const handleDeleted = (data) => {
+      if (data?.id) {
+        setLists((prev) => prev.filter((l) => l.id !== data.id));
+      } else {
+        fetchLists();
+      }
+    };
+
+    socket.on("contact_list_created", handleCreated);
+    socket.on("contact_list_deleted", handleDeleted);
+    socket.on("contact_list_updated", handleUpdate);
     socket.on("contact_updated", handleUpdate);
     socket.on("campaign_progress", handleUpdate);
 
     return () => {
+      socket.off("contact_list_created", handleCreated);
+      socket.off("contact_list_deleted", handleDeleted);
+      socket.off("contact_list_updated", handleUpdate);
       socket.off("contact_updated", handleUpdate);
       socket.off("campaign_progress", handleUpdate);
     };
@@ -127,31 +154,62 @@ export default function ContactsPage() {
     }
 
     setUploading(true);
+    setUploadStep("Reading spreadsheet & analyzing rows...");
+    setUploadProgress(25);
     setError(null);
+
+    const stepTimer1 = setTimeout(() => {
+      setUploadStep("Auto-detecting phone numbers, names & columns...");
+      setUploadProgress(60);
+    }, 400);
+
+    const stepTimer2 = setTimeout(() => {
+      setUploadStep("Fast bulk syncing contacts to database...");
+      setUploadProgress(85);
+    }, 900);
 
     try {
       const formData = new FormData();
       formData.append("name", listName.trim());
       formData.append("file", file);
 
-      await api.post("/api/contact_lists", formData, {
+      const res = await api.post("/api/contact_lists", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setSuccess("List saved successfully!");
-      showSuccess(`Contact list "${listName.trim()}" saved successfully!`);
-      fetchLists();
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
+      setUploadProgress(100);
+      setUploadStep("Contact list synced successfully!");
+
+      const memberCount = res.data?.list?.member_count || 0;
+      showSuccess(`List "${listName.trim()}" created with ${memberCount} contacts!`);
+
+      if (res.data?.list) {
+        setLists((prev) => {
+          if (prev.some((l) => l.id === res.data.list.id)) return prev;
+          return [res.data.list, ...prev];
+        });
+      }
       
       setTimeout(() => {
         setShowUploadModal(false);
-        setSuccess(null);
+        setUploading(false);
+        setUploadStep("");
+        setUploadProgress(0);
         setFile(null);
         setListName("");
-      }, 1500);
+        fetchLists();
+      }, 500);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to upload list");
-    } finally {
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
       setUploading(false);
+      setUploadStep("");
+      setUploadProgress(0);
+      const errMsg = err.response?.data?.error || "Failed to upload and save list.";
+      setError(errMsg);
+      showError(errMsg);
     }
   };
 
@@ -163,23 +221,29 @@ export default function ContactsPage() {
     }
 
     setUploading(true);
+    setUploadStep("Creating empty list...");
     setError(null);
 
     try {
-      await api.post("/api/contact_lists/manual", { name: manualListName.trim() });
-      setSuccess("Empty list created successfully!");
+      const res = await api.post("/api/contact_lists/manual", { name: manualListName.trim() });
       showSuccess(`List "${manualListName.trim()}" created successfully!`);
-      fetchLists();
       
-      setTimeout(() => {
-        setShowManualModal(false);
-        setSuccess(null);
-        setManualListName("");
-      }, 1500);
+      if (res.data?.list) {
+        setLists((prev) => {
+          if (prev.some((l) => l.id === res.data.list.id)) return prev;
+          return [res.data.list, ...prev];
+        });
+      }
+
+      setShowManualModal(false);
+      setManualListName("");
+      fetchLists();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to create list");
+      showError(err.response?.data?.error || "Failed to create list");
     } finally {
       setUploading(false);
+      setUploadStep("");
     }
   };
 
@@ -362,96 +426,142 @@ export default function ContactsPage() {
               </div>
             )}
 
-            <form onSubmit={handleUpload}>
-              <div className="form-group">
-                <label className="form-label">List Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g., Diwali 2026 Contacts, Sheet 1"
-                  value={listName}
-                  onChange={(e) => setListName(e.target.value)}
-                  disabled={uploading}
-                  required
+            {uploading ? (
+              <div style={{ textAlign: "center", padding: "36px 16px" }}>
+                <div
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    border: "3px solid #e2e8f0",
+                    borderTopColor: "var(--accent, #2563eb)",
+                    animation: "spin 1s linear infinite",
+                    margin: "0 auto 20px auto",
+                  }}
                 />
-              </div>
+                <style>{`
+                  @keyframes spin {
+                    to { transform: rotate(360deg); }
+                  }
+                `}</style>
+                <h3 style={{ fontSize: "17px", fontWeight: "600", color: "var(--text-primary)", marginBottom: "8px" }}>
+                  Saving Contact List
+                </h3>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                  {uploadStep || "Analyzing spreadsheet and preparing contacts..."}
+                </p>
 
-              <div className="form-group">
-                <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span>Excel / CSV File</span>
-                </label>
-                
-                <div style={{ padding: "10px 12px", background: "var(--accent-muted)", color: "var(--text-primary)", borderRadius: "8px", fontSize: "12px", marginBottom: "16px", display: "flex", gap: "8px" }}>
-                  <div style={{ color: "var(--accent)", marginTop: "2px" }}>ℹ️</div>
-                  <div>
-                    <strong>Format Required:</strong> Your file should have 4 columns: <strong>S.No, Name, Mobile Number, and City</strong>. Mobile number must be in the 3rd column (Column C). (Country code `+91` is automatically added).
-                  </div>
+                {/* Animated Progress Bar */}
+                <div style={{ width: "100%", height: "8px", background: "#f1f5f9", borderRadius: "999px", overflow: "hidden", marginBottom: "16px" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${uploadProgress}%`,
+                      background: "linear-gradient(90deg, #2563eb, #38bdf8)",
+                      borderRadius: "999px",
+                      transition: "width 0.4s ease-in-out",
+                    }}
+                  />
                 </div>
 
-                {file ? (
-                  <div style={{ padding: "16px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
-                    <FileSpreadsheet size={24} style={{ color: "var(--accent)" }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {file.name}
-                      </div>
-                      <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                        {(file.size / 1024).toFixed(1)} KB
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
-                      onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                      disabled={uploading}
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    className={`upload-zone ${dragover ? "dragover" : ""}`}
-                    onDragOver={(e) => { e.preventDefault(); setDragover(true); }}
-                    onDragLeave={() => setDragover(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ padding: "32px 20px" }}
-                  >
-                    <div className="upload-icon" style={{ width: "56px", height: "56px", marginBottom: "16px" }}>
-                      <Upload size={24} />
-                    </div>
-                    <h3 style={{ fontSize: "16px" }}>Drop file or click to browse</h3>
-                    <p style={{ fontSize: "13px" }}>Supports .xlsx, .xls, .csv</p>
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleFileSelect}
-                  style={{ display: "none" }}
-                  disabled={uploading}
-                />
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", fontSize: "12px", color: "#64748b" }}>
+                  <span>⚡ High-Speed Batch Sync Active</span>
+                  <span>•</span>
+                  <span>Auto-detecting Columns</span>
+                </div>
               </div>
+            ) : (
+              <form onSubmit={handleUpload}>
+                <div className="form-group">
+                  <label className="form-label">List Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g., Diwali 2026 Contacts, Sheet 1"
+                    value={listName}
+                    onChange={(e) => setListName(e.target.value)}
+                    disabled={uploading}
+                    required
+                  />
+                </div>
 
-              <div className="modal-actions" style={{ marginTop: "24px" }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowUploadModal(false)}
-                  disabled={uploading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={uploading || !listName.trim() || !file}
-                >
-                  {uploading ? "Saving..." : "Save List"}
-                </button>
-              </div>
-            </form>
+                <div className="form-group">
+                  <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span>Excel / CSV File</span>
+                  </label>
+                  
+                  <div style={{ padding: "10px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: "8px", fontSize: "12px", marginBottom: "16px", display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                    <div style={{ marginTop: "1px", fontSize: "14px" }}>✨</div>
+                    <div>
+                      <strong>Smart Auto-Detection:</strong> Upload any Excel or CSV sheet. Column headers, names, phone numbers, and cities are auto-detected automatically. Country prefix `+91` is auto-formatted.
+                    </div>
+                  </div>
+
+                  {file ? (
+                    <div style={{ padding: "16px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
+                      <FileSpreadsheet size={24} style={{ color: "var(--accent)" }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {file.name}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                          {(file.size / 1024).toFixed(1)} KB
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                        onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                        disabled={uploading}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className={`upload-zone ${dragover ? "dragover" : ""}`}
+                      onDragOver={(e) => { e.preventDefault(); setDragover(true); }}
+                      onDragLeave={() => setDragover(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ padding: "32px 20px" }}
+                    >
+                      <div className="upload-icon" style={{ width: "56px", height: "56px", marginBottom: "16px" }}>
+                        <Upload size={24} />
+                      </div>
+                      <h3 style={{ fontSize: "16px" }}>Drop file or click to browse</h3>
+                      <p style={{ fontSize: "13px" }}>Supports .xlsx, .xls, .csv</p>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileSelect}
+                    style={{ display: "none" }}
+                    disabled={uploading}
+                  />
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: "24px" }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowUploadModal(false)}
+                    disabled={uploading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={uploading || !listName.trim() || !file}
+                  >
+                    Save List
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

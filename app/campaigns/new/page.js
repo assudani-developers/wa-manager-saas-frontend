@@ -7,6 +7,7 @@ import { Megaphone, ArrowLeft, X, Image as ImageIcon, FolderOpen, Upload, Calend
 import api, { normalizeMediaUrl } from "../../lib/api";
 import { useToast } from "../../components/ToastProvider";
 import MediaPickerModal from "../../components/MediaPickerModal";
+import { getSocket } from "../../lib/socket";
 
 export default function NewCampaignPage() {
   const router = useRouter();
@@ -69,6 +70,29 @@ export default function NewCampaignPage() {
       }
     };
     fetchData();
+
+    const socket = getSocket();
+    const handleListCreated = (data) => {
+      if (data?.list) {
+        setContactLists((prev) => {
+          if (prev.some((l) => l.id === data.list.id)) return prev;
+          return [data.list, ...prev];
+        });
+      }
+    };
+    const handleListDeleted = (data) => {
+      if (data?.id) {
+        setContactLists((prev) => prev.filter((l) => l.id !== data.id));
+      }
+    };
+
+    socket.on("contact_list_created", handleListCreated);
+    socket.on("contact_list_deleted", handleListDeleted);
+
+    return () => {
+      socket.off("contact_list_created", handleListCreated);
+      socket.off("contact_list_deleted", handleListDeleted);
+    };
   }, []);
 
   const selectedTemplate = templates.find((t) => t.name === templateName);
