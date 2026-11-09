@@ -56,8 +56,9 @@ export default function CampaignDetailPage() {
     } catch (e) {}
   }, []);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isSilent = false) => {
     try {
+      if (!isSilent) setLoading(true);
       const [campRes, recRes, tmplRes] = await Promise.all([
         api.get(`/api/campaigns/${id}`),
         api.get(`/api/campaigns/${id}/recipients`),
@@ -68,14 +69,14 @@ export default function CampaignDetailPage() {
       setTemplates(tmplRes.data || []);
     } catch (err) {
       console.error("Failed to fetch campaign data:", err);
-      setError("Failed to load campaign data");
+      if (!isSilent) setError("Failed to load campaign data");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
-    if (id) fetchData();
+    if (id) fetchData(false);
   }, [id, fetchData]);
 
   // Real-time Socket.io updates for live campaign progress & delivery status
@@ -85,16 +86,47 @@ export default function CampaignDetailPage() {
 
     const handleCampaignUpdate = (data) => {
       if (!data?.campaignId || String(data.campaignId) === String(id)) {
-        fetchData();
+        if (data?.phone) {
+          setRecipients((prev) =>
+            prev.map((r) => {
+              if (r.phone_number === data.phone || r.phone_number === `+${data.phone}`) {
+                return {
+                  ...r,
+                  status: data.success ? "sent" : "failed",
+                  error_message: data.error || null,
+                };
+              }
+              return r;
+            })
+          );
+        }
+        fetchData(true);
       }
     };
 
+    const handleMessageStatus = (data) => {
+      if (data?.meta_message_id || data?.recipient) {
+        setRecipients((prev) =>
+          prev.map((r) => {
+            if (
+              (data.meta_message_id && r.meta_message_id === data.meta_message_id) ||
+              (data.recipient && (r.phone_number === data.recipient || r.phone_number === `+${data.recipient}`))
+            ) {
+              return { ...r, status: data.status };
+            }
+            return r;
+          })
+        );
+      }
+      fetchData(true);
+    };
+
     socket.on("campaign_progress", handleCampaignUpdate);
-    socket.on("message_status", handleCampaignUpdate);
+    socket.on("message_status", handleMessageStatus);
 
     return () => {
       socket.off("campaign_progress", handleCampaignUpdate);
-      socket.off("message_status", handleCampaignUpdate);
+      socket.off("message_status", handleMessageStatus);
     };
   }, [id, fetchData]);
 

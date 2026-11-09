@@ -19,12 +19,52 @@ import {
 } from "lucide-react";
 import AccountHealthModal from "./AccountHealthModal";
 import BrandLogo from "./BrandLogo";
+import { getSocket } from "../lib/socket";
 
 export default function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+  const [hasNewChat, setHasNewChat] = useState(false);
+  const [isCampaignActive, setIsCampaignActive] = useState(false);
+  const [hasWalletUpdate, setHasWalletUpdate] = useState(false);
+
+  useEffect(() => {
+    if (pathname === "/chat") setHasNewChat(false);
+    if (pathname === "/campaigns") setIsCampaignActive(false);
+    if (pathname === "/billing") setHasWalletUpdate(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleNewMessage = (msg) => {
+      if (pathname !== "/chat" && msg.direction === "inbound") {
+        setHasNewChat(true);
+      }
+    };
+
+    const handleCampaign = () => {
+      setIsCampaignActive(true);
+      setTimeout(() => setIsCampaignActive(false), 8000);
+    };
+
+    const handleWallet = () => {
+      setHasWalletUpdate(true);
+      setTimeout(() => setHasWalletUpdate(false), 5000);
+    };
+
+    socket.on("new_message", handleNewMessage);
+    socket.on("campaign_progress", handleCampaign);
+    socket.on("wallet_updated", handleWallet);
+
+    return () => {
+      socket.off("new_message", handleNewMessage);
+      socket.off("campaign_progress", handleCampaign);
+      socket.off("wallet_updated", handleWallet);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     try {
@@ -130,8 +170,50 @@ export default function SidebarNav() {
               pathname === item.href || pathname?.startsWith(item.href + "/");
             return (
               <Link key={item.href} href={item.href} title={item.label} style={{ textDecoration: "none", outline: "none" }}>
-                <div className={`nav-item ${isActive ? "active" : ""}`} style={{ outline: "none" }}>
+                <div className={`nav-item ${isActive ? "active" : ""}`} style={{ outline: "none", position: "relative" }}>
                   <item.icon size={21} strokeWidth={isActive ? 2.4 : 2} />
+                  {item.href === "/chat" && hasNewChat && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "#3b82f6",
+                        boxShadow: "0 0 6px #3b82f6",
+                      }}
+                    />
+                  )}
+                  {item.href === "/campaigns" && isCampaignActive && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "#a855f7",
+                        boxShadow: "0 0 6px #a855f7",
+                      }}
+                    />
+                  )}
+                  {item.href === "/billing" && hasWalletUpdate && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "#10b981",
+                        boxShadow: "0 0 6px #10b981",
+                      }}
+                    />
+                  )}
                 </div>
               </Link>
             );
@@ -194,8 +276,18 @@ export default function SidebarNav() {
               key={item.href}
               href={item.href}
               className={`mobile-nav-item ${isActive ? "active" : ""}`}
+              style={{ position: "relative" }}
             >
               <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} />
+              {item.href === "/chat" && hasNewChat && (
+                <span style={{ position: "absolute", top: "4px", right: "calc(50% - 14px)", width: "6px", height: "6px", borderRadius: "50%", background: "#3b82f6" }} />
+              )}
+              {item.href === "/campaigns" && isCampaignActive && (
+                <span style={{ position: "absolute", top: "4px", right: "calc(50% - 14px)", width: "6px", height: "6px", borderRadius: "50%", background: "#a855f7" }} />
+              )}
+              {item.href === "/billing" && hasWalletUpdate && (
+                <span style={{ position: "absolute", top: "4px", right: "calc(50% - 14px)", width: "6px", height: "6px", borderRadius: "50%", background: "#10b981" }} />
+              )}
               <span>{item.label}</span>
             </Link>
           );

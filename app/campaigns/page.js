@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Megaphone, Trash2 } from "lucide-react";
+import { Plus, Megaphone, Trash2, Zap } from "lucide-react";
 import { getCampaigns, deleteCampaign } from "../lib/api";
+import { getSocket } from "../lib/socket";
 import { format } from "date-fns";
 import { useToast } from "../components/ToastProvider";
 
@@ -11,19 +12,61 @@ export default function CampaignsPage() {
   const { showSuccess, showError } = useToast();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [liveEvent, setLiveEvent] = useState(null);
+
+  const fetchCampaigns = async (isSilent = false) => {
+    try {
+      if (!isSilent) setLoading(true);
+      const res = await getCampaigns();
+      setCampaigns(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch campaigns:", err);
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCampaigns = async () => {
-      try {
-        const res = await getCampaigns();
-        setCampaigns(res.data);
-      } catch (err) {
-        console.error("Failed to fetch campaigns:", err);
-      } finally {
-        setLoading(false);
+    fetchCampaigns(false);
+  }, []);
+
+  // Real-time socket updates for campaigns list
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleCampaignProgress = (data) => {
+      if (data?.campaignId) {
+        setCampaigns((prev) =>
+          prev.map((c) => {
+            if (String(c.id) === String(data.campaignId)) {
+              const newSent = data.success ? (c.total_sent || 0) + 1 : (c.total_sent || 0);
+              const newFailed = !data.success ? (c.total_failed || 0) + 1 : (c.total_failed || 0);
+              return {
+                ...c,
+                total_sent: newSent,
+                total_failed: newFailed,
+              };
+            }
+            return c;
+          })
+        );
+        setLiveEvent(`Campaign dispatch active: Processed ${data.phone || "recipient"}`);
+        setTimeout(() => setLiveEvent(null), 3500);
       }
+      fetchCampaigns(true);
     };
-    fetchCampaigns();
+
+    const handleMessageStatus = (data) => {
+      fetchCampaigns(true);
+    };
+
+    socket.on("campaign_progress", handleCampaignProgress);
+    socket.on("message_status", handleMessageStatus);
+
+    return () => {
+      socket.off("campaign_progress", handleCampaignProgress);
+      socket.off("message_status", handleMessageStatus);
+    };
   }, []);
 
   const handleDelete = async (id) => {
@@ -40,16 +83,70 @@ export default function CampaignsPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Campaigns</h1>
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <h1 className="page-title" style={{ margin: 0 }}>Campaigns</h1>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "3px 10px",
+                background: "#ecfdf5",
+                border: "1px solid #a7f3d0",
+                borderRadius: "20px",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "#047857",
+              }}
+            >
+              <span
+                style={{
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  boxShadow: "0 0 8px #10b981",
+                  display: "inline-block",
+                }}
+              />
+              Live Sync Active
+            </div>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "4px" }}>
+            Manage broadcast campaigns with real-time delivery tracking.
+          </p>
+        </div>
+
         <Link href="/campaigns/new" className="btn-primary">
           <Plus size={18} />
           New Campaign
         </Link>
       </div>
 
+      {liveEvent && (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "8px 14px",
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "13px",
+            color: "#1e40af",
+          }}
+        >
+          <Zap size={15} color="#3b82f6" />
+          <span>{liveEvent}</span>
+        </div>
+      )}
+
       <div className="page-content">
-        {loading ? (
+        {loading && campaigns.length === 0 ? (
           <div className="loading-container">
             <div className="loading-spinner" />
           </div>
@@ -106,10 +203,10 @@ export default function CampaignsPage() {
         ) : (
           <div className="campaign-grid">
             {campaigns.map((campaign) => (
-              <div key={campaign.id} className="ui-card animate-fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div key={campaign.id} className="ui-card animate-fade-in" style={{ display: "flex", flexDirection: "column" }}>
                 <div className="ui-card-header">
                   <h3 className="ui-card-title">{campaign.name}</h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     {campaign.status === "scheduled" && (
                       <span
                         style={{
@@ -128,9 +225,9 @@ export default function CampaignsPage() {
                     <div className="ui-card-badge">
                       {campaign.created_at ? format(new Date(campaign.created_at), "MMM d, yyyy") : ""}
                     </div>
-                    <button 
+                    <button
                       onClick={() => handleDelete(campaign.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
                       title="Delete Campaign"
                     >
                       <Trash2 size={16} />
@@ -138,13 +235,13 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                <div className="ui-card-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Megaphone size={16} /> 
-                  Template: <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{campaign.template_name}</span>
+                <div className="ui-card-subtitle" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Megaphone size={16} />
+                  Template: <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{campaign.template_name}</span>
                 </div>
 
                 {campaign.status === "scheduled" && campaign.scheduled_at && (
-                  <div style={{ marginTop: '8px', padding: '6px 10px', background: 'rgba(124, 58, 237, 0.08)', borderRadius: '8px', fontSize: '12px', color: '#7c3aed', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ marginTop: "8px", padding: "6px 10px", background: "rgba(124, 58, 237, 0.08)", borderRadius: "8px", fontSize: "12px", color: "#7c3aed", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
                     <span>⏰ Auto-dispatch at:</span>
                     <span>{format(new Date(campaign.scheduled_at), "MMM d, yyyy 'at' h:mm a")}</span>
                   </div>
@@ -169,8 +266,8 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', textAlign: 'center' }}>
-                  <Link href={`/campaigns/${campaign.id}`} style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '14px', textDecoration: 'none', display: 'inline-block', width: '100%' }}>
+                <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid var(--border-color)", textAlign: "center" }}>
+                  <Link href={`/campaigns/${campaign.id}`} style={{ color: "var(--accent)", fontWeight: 600, fontSize: "14px", textDecoration: "none", display: "inline-block", width: "100%" }}>
                     View Recipients →
                   </Link>
                 </div>
