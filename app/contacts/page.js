@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Upload, Users, FileSpreadsheet, X, CheckCircle2, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
 import api, { deleteContactList } from "../lib/api";
+import { getSocket } from "../lib/socket";
 import { format } from "date-fns";
 import { useToast } from "../components/ToastProvider";
 
@@ -37,6 +38,20 @@ export default function ContactsPage() {
 
   useEffect(() => {
     fetchLists();
+  }, []);
+
+  // Real-time socket updates for contact lists
+  useEffect(() => {
+    const socket = getSocket();
+    const handleUpdate = () => fetchLists();
+
+    socket.on("contact_updated", handleUpdate);
+    socket.on("campaign_progress", handleUpdate);
+
+    return () => {
+      socket.off("contact_updated", handleUpdate);
+      socket.off("campaign_progress", handleUpdate);
+    };
   }, []);
 
   const handleDeleteList = async (id) => {

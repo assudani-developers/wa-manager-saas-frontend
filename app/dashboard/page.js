@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Users, Megaphone, Send, Mail, Briefcase, FileText, CheckCircle, BarChart2, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import api from "../lib/api";
+import { getSocket } from "../lib/socket";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -44,6 +45,30 @@ export default function DashboardPage() {
       .finally(() => {
         setInboundLoading(false);
       });
+  }, [startDate, endDate]);
+
+  // Real-time socket updates for live dashboard analytics & recent inbound inquiries
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleDashboardUpdate = () => {
+      fetchDashboard();
+      api.get("/api/messages/inbound")
+        .then((res) => {
+          setInboundReplies(Array.isArray(res.data) ? res.data.slice(0, 5) : []);
+        })
+        .catch(() => {});
+    };
+
+    socket.on("new_message", handleDashboardUpdate);
+    socket.on("campaign_progress", handleDashboardUpdate);
+    socket.on("message_status", handleDashboardUpdate);
+
+    return () => {
+      socket.off("new_message", handleDashboardUpdate);
+      socket.off("campaign_progress", handleDashboardUpdate);
+      socket.off("message_status", handleDashboardUpdate);
+    };
   }, [startDate, endDate]);
 
   if (loading) {

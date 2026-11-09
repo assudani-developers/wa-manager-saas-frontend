@@ -22,6 +22,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import api, { normalizeMediaUrl } from "../../lib/api";
+import { getSocket } from "../../lib/socket";
 import { format } from "date-fns";
 import { useToast } from "../../components/ToastProvider";
 
@@ -75,6 +76,26 @@ export default function CampaignDetailPage() {
 
   useEffect(() => {
     if (id) fetchData();
+  }, [id, fetchData]);
+
+  // Real-time Socket.io updates for live campaign progress & delivery status
+  useEffect(() => {
+    if (!id) return;
+    const socket = getSocket();
+
+    const handleCampaignUpdate = (data) => {
+      if (!data?.campaignId || String(data.campaignId) === String(id)) {
+        fetchData();
+      }
+    };
+
+    socket.on("campaign_progress", handleCampaignUpdate);
+    socket.on("message_status", handleCampaignUpdate);
+
+    return () => {
+      socket.off("campaign_progress", handleCampaignUpdate);
+      socket.off("message_status", handleCampaignUpdate);
+    };
   }, [id, fetchData]);
 
   const template = templates?.find((t) => t.name === campaign?.template_name);
