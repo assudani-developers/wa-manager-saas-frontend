@@ -254,61 +254,66 @@ export default function ChatWindow({
 
       {/* Master Admin Multi-Tenant Client Assign Bar */}
       {isMasterAdmin && (
-        <div
-          style={{
-            padding: "8px 16px",
-            background: contact.user_id ? "rgba(59, 130, 246, 0.05)" : "rgba(245, 158, 11, 0.08)",
-            borderBottom: "1px solid var(--border-color, #e2e8f0)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            fontSize: "12px",
-            flexWrap: "wrap",
-            gap: "8px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontWeight: "600", color: contact.user_id ? "#2563eb" : "#d97706" }}>
-              {contact.user_id ? "👤 Client Workspace:" : "📥 Direct Inbound (Unassigned):"}
-            </span>
-            <span style={{ color: "var(--text-secondary)" }}>
-              {contact.client_owner_name ? contact.client_owner_name : "Direct message from unprompted customer"}
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <label style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "500" }}>Assign to Client:</label>
-            <select
-              value={contact.user_id || ""}
-              onChange={async (e) => {
-                const targetId = e.target.value || null;
-                setAssigning(true);
-                try {
-                  await onAssignContact?.(contact.id, targetId);
-                } finally {
-                  setAssigning(false);
-                }
-              }}
-              disabled={assigning}
+        (() => {
+          const isAssignedToClient = Boolean(contact.user_id && contact.client_owner_name && contact.client_owner_name.toLowerCase() !== "piyushassudani");
+          return (
+            <div
               style={{
-                padding: "4px 8px",
-                fontSize: "11px",
-                borderRadius: "6px",
-                border: "1px solid var(--border-color, #cbd5e1)",
-                background: "#fff",
-                cursor: "pointer",
-                fontWeight: "500",
+                padding: "8px 16px",
+                background: isAssignedToClient ? "rgba(59, 130, 246, 0.05)" : "rgba(245, 158, 11, 0.08)",
+                borderBottom: "1px solid var(--border-color, #e2e8f0)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                fontSize: "12px",
+                flexWrap: "wrap",
+                gap: "8px",
               }}
             >
-              <option value="">-- Direct Inbound (Unassigned) --</option>
-              {clientsList.map((cl) => (
-                <option key={cl.id} value={cl.id}>
-                  {cl.username} {cl.business_name ? `(${cl.business_name})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontWeight: "600", color: isAssignedToClient ? "#2563eb" : "#d97706" }}>
+                  {isAssignedToClient ? "👤 Client Workspace:" : "📥 Direct Inbound (Unassigned):"}
+                </span>
+                <span style={{ color: "var(--text-secondary)" }}>
+                  {isAssignedToClient ? contact.client_owner_name : "Direct message from unprompted customer"}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <label style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "500" }}>Assign to Client:</label>
+                <select
+                  value={isAssignedToClient ? contact.user_id : ""}
+                  onChange={async (e) => {
+                    const targetId = e.target.value || null;
+                    setAssigning(true);
+                    try {
+                      await onAssignContact?.(contact.id, targetId);
+                    } finally {
+                      setAssigning(false);
+                    }
+                  }}
+                  disabled={assigning}
+                  style={{
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color, #cbd5e1)",
+                    background: "#fff",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
+                >
+                  <option value="">-- Direct Inbound (Unassigned) --</option>
+                  {clientsList.map((cl) => (
+                    <option key={cl.id} value={cl.id}>
+                      {cl.username} {cl.business_name ? `(${cl.business_name})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          );
+        })()
       )}
 
       {/* Chat Messages */}

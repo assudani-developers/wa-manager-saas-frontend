@@ -46,7 +46,10 @@ export default function ClientSwitcher() {
           setLoading(true);
           getClientsDropdown()
             .then((res) => {
-              const list = res.data.clients || [];
+              const rawList = res.data?.clients || (Array.isArray(res.data) ? res.data : []);
+              const list = rawList.filter(
+                (c) => c.role !== "master_admin" && c.username?.toLowerCase() !== "piyushassudani"
+              );
               cachedClientsList = list;
               lastClientsListFetch = Date.now();
               setClients(list);

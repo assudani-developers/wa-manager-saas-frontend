@@ -66,7 +66,10 @@ export default function BillingPage() {
       if (isMaster) {
         getClientsDropdown()
           .then((res) => {
-            const list = res.data.clients || [];
+            const rawList = res.data?.clients || (Array.isArray(res.data) ? res.data : []);
+            const list = rawList.filter(
+              (c) => c.role !== "master_admin" && c.username?.toLowerCase() !== "piyushassudani"
+            );
             setClients(list);
             const activeId = localStorage.getItem("active_client_id");
             if (activeId) {

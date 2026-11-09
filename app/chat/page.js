@@ -47,7 +47,14 @@ export default function ChatPage() {
     if (isMasterAdmin) {
       import("../lib/api").then(({ getClientsDropdown }) => {
         getClientsDropdown()
-          .then((res) => setClientsList(res.data || []))
+          .then((res) => {
+            const rawList = res.data?.clients || (Array.isArray(res.data) ? res.data : []);
+            // Filter strictly for client accounts, exclude Master Admin (Piyush Assudani)
+            const filtered = rawList.filter(
+              (c) => c.role !== "master_admin" && c.username?.toLowerCase() !== "piyushassudani"
+            );
+            setClientsList(filtered);
+          })
           .catch((err) => console.error("Failed to load clients dropdown:", err));
       });
     }

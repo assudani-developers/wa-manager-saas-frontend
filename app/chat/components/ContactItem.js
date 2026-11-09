@@ -45,7 +45,7 @@ export default function ContactItem({ contact, isActive, onClick, showOwnerBadge
               {contact.name || contact.phone_number}
             </span>
             {showOwnerBadge && (
-              contact.client_owner_name ? (
+              contact.client_owner_name && contact.client_owner_name.toLowerCase() !== "piyushassudani" ? (
                 <span
                   style={{
                     fontSize: "10px",
