@@ -235,7 +235,7 @@ export default function ChatPage() {
             {
               id: msg.contact_id,
               phone_number: msg.contact_phone,
-              name: msg.contact_name,
+              name: msg.contact_name || msg.contact_phone || "Customer",
               last_message: msg.message_body,
               last_message_direction: msg.direction,
               last_message_time: msg.timestamp,
@@ -269,6 +269,9 @@ export default function ChatPage() {
         updated.splice(idx, 1);
         return [contact, ...updated];
       });
+
+      // Silently re-sync contacts directory from server
+      fetchContacts();
     };
 
     const handleStatusUpdate = (data) => {
