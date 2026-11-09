@@ -53,6 +53,7 @@ export default function BillingPage() {
   const [adminClientsList, setAdminClientsList] = useState([]);
   const [rechargeClientId, setRechargeClientId] = useState("");
   const [rechargeAmount, setRechargeAmount] = useState("500");
+  const [rechargeAction, setRechargeAction] = useState("add"); // "add" | "deduct"
   const [rechargeDescription, setRechargeDescription] = useState("");
   const [submittingRecharge, setSubmittingRecharge] = useState(false);
 
@@ -161,30 +162,36 @@ export default function BillingPage() {
   const handleRechargeSubmit = async (e) => {
     e.preventDefault();
     if (!rechargeClientId) {
-      showError("Please select a client account to recharge.");
+      showError("Please select a client account.");
       return;
     }
 
     const amt = parseFloat(rechargeAmount);
     if (isNaN(amt) || amt <= 0) {
-      showError("Please enter a valid positive recharge amount.");
+      showError("Please enter a valid positive amount.");
       return;
     }
 
     setSubmittingRecharge(true);
     try {
+      const isDeduct = rechargeAction === "deduct";
       const res = await rechargeClientWallet({
         user_id: rechargeClientId,
         amount: amt,
-        description: rechargeDescription.trim() || `Wallet recharge (+₹${amt.toFixed(2)})`,
+        description:
+          rechargeDescription.trim() ||
+          (isDeduct
+            ? `Admin Fund Deduction (-₹${amt.toFixed(2)})`
+            : `Wallet recharge (+₹${amt.toFixed(2)})`),
+        action: rechargeAction,
       });
 
-      showSuccess(res.data?.message || "Wallet credited successfully!");
+      showSuccess(res.data?.message || (isDeduct ? "Funds deducted successfully!" : "Wallet credited successfully!"));
       setIsRechargeModalOpen(false);
       setRechargeDescription("");
       loadBillingData(true);
     } catch (err) {
-      showError(err.response?.data?.error || "Failed to process recharge.");
+      showError(err.response?.data?.error || "Failed to process fund adjustment.");
     } finally {
       setSubmittingRecharge(false);
     }
@@ -455,25 +462,48 @@ export default function BillingPage() {
                       {cl.total_messages || 0}
                     </td>
                     <td style={{ padding: "12px", textAlign: "right" }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRechargeClientId(cl.id);
-                          setIsRechargeModalOpen(true);
-                        }}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: "#002277",
-                          color: "#ffffff",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                      >
-                        + Add Funds
-                      </button>
+                      <div style={{ display: "inline-flex", gap: "6px" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRechargeClientId(cl.id);
+                            setRechargeAction("add");
+                            setIsRechargeModalOpen(true);
+                          }}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            border: "none",
+                            background: "#002277",
+                            color: "#ffffff",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          + Add Funds
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRechargeClientId(cl.id);
+                            setRechargeAction("deduct");
+                            setIsRechargeModalOpen(true);
+                          }}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #fecdd3",
+                            background: "#fff1f2",
+                            color: "#e11d48",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          − Deduct
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -846,15 +876,15 @@ export default function BillingPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(0, 34, 119, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#002277" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: rechargeAction === "deduct" ? "rgba(225, 29, 72, 0.1)" : "rgba(0, 34, 119, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: rechargeAction === "deduct" ? "#e11d48" : "#002277" }}>
                   <PlusCircle size={20} />
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#090d16" }}>
-                    Add Funds / Recharge Wallet
+                    {rechargeAction === "deduct" ? "Deduct Funds / Adjust Wallet" : "Add Funds / Recharge Wallet"}
                   </h3>
                   <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
-                    Credit client balance for sending WhatsApp messages
+                    {rechargeAction === "deduct" ? "Reduce client balance or reverse manual credits" : "Credit client balance for sending WhatsApp messages"}
                   </p>
                 </div>
               </div>
@@ -864,6 +894,44 @@ export default function BillingPage() {
                 style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
               >
                 <X size={18} />
+              </button>
+            </div>
+
+            {/* Action Mode Toggle */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", background: "#f1f5f9", padding: "4px", borderRadius: "10px", marginBottom: "16px" }}>
+              <button
+                type="button"
+                onClick={() => setRechargeAction("add")}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "12.5px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: rechargeAction === "add" ? "#002277" : "transparent",
+                  color: rechargeAction === "add" ? "#ffffff" : "#64748b",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                + Add / Credit Funds
+              </button>
+              <button
+                type="button"
+                onClick={() => setRechargeAction("deduct")}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "12.5px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: rechargeAction === "deduct" ? "#e11d48" : "transparent",
+                  color: rechargeAction === "deduct" ? "#ffffff" : "#64748b",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                − Deduct / Debit Funds
               </button>
             </div>
 
@@ -900,12 +968,12 @@ export default function BillingPage() {
               {/* Amount Input */}
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
-                  Recharge Amount (INR ₹)
+                  {rechargeAction === "deduct" ? "Deduction Amount (INR ₹)" : "Recharge Amount (INR ₹)"}
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  min="1"
+                  min="0.01"
                   value={rechargeAmount}
                   onChange={(e) => setRechargeAmount(e.target.value)}
                   placeholder="e.g. 500"
@@ -916,13 +984,13 @@ export default function BillingPage() {
                     border: "1px solid #cbd5e1",
                     fontSize: "16px",
                     fontWeight: 800,
-                    color: "#002277",
+                    color: rechargeAction === "deduct" ? "#e11d48" : "#002277",
                   }}
                   required
                 />
                 {/* Quick Chips */}
                 <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                  {[200, 500, 1000, 2000, 5000].map((amt) => (
+                  {[100, 200, 500, 1000, 2000].map((amt) => (
                     <button
                       key={amt}
                       type="button"
@@ -932,13 +1000,13 @@ export default function BillingPage() {
                         borderRadius: "8px",
                         fontSize: "11.5px",
                         fontWeight: 700,
-                        background: rechargeAmount === String(amt) ? "#002277" : "#f1f5f9",
+                        background: rechargeAmount === String(amt) ? (rechargeAction === "deduct" ? "#e11d48" : "#002277") : "#f1f5f9",
                         color: rechargeAmount === String(amt) ? "#ffffff" : "#475569",
                         border: "1px solid #e2e8f0",
                         cursor: "pointer",
                       }}
                     >
-                      +₹{amt}
+                      {rechargeAction === "deduct" ? `-₹${amt}` : `+₹${amt}`}
                     </button>
                   ))}
                 </div>
@@ -947,13 +1015,13 @@ export default function BillingPage() {
               {/* Note / Description */}
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, marginBottom: "6px", color: "#090d16" }}>
-                  Recharge Note / Reference (Optional)
+                  {rechargeAction === "deduct" ? "Deduction Reason (Optional)" : "Recharge Note / Reference (Optional)"}
                 </label>
                 <input
                   type="text"
                   value={rechargeDescription}
                   onChange={(e) => setRechargeDescription(e.target.value)}
-                  placeholder="e.g. Diwali Marketing Campaign Recharge"
+                  placeholder={rechargeAction === "deduct" ? "e.g. Balance correction or refund adjustment" : "e.g. Diwali Marketing Campaign Recharge"}
                   style={{
                     width: "100%",
                     padding: "9px 12px",
@@ -982,10 +1050,16 @@ export default function BillingPage() {
                     padding: "9px 20px",
                     fontSize: "13px",
                     fontWeight: 700,
-                    background: "linear-gradient(135deg, #002277 0%, #1e40af 100%)",
+                    background: rechargeAction === "deduct"
+                      ? "linear-gradient(135deg, #e11d48 0%, #be123c 100%)"
+                      : "linear-gradient(135deg, #002277 0%, #1e40af 100%)",
                   }}
                 >
-                  {submittingRecharge ? "Recharging..." : "Confirm & Add Funds"}
+                  {submittingRecharge
+                    ? "Processing..."
+                    : rechargeAction === "deduct"
+                    ? "Confirm & Deduct Funds"
+                    : "Confirm & Add Funds"}
                 </button>
               </div>
             </form>
