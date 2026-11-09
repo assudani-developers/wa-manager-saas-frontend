@@ -513,96 +513,6 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Official Category Pricing Strip */}
-      <div
-        style={{
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
-          borderRadius: "16px",
-          padding: "16px 20px",
-          marginBottom: "24px",
-          boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
-          <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Official Category Rates (INR / Message)
-          </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669", background: "rgba(16, 185, 129, 0.1)", padding: "2px 8px", borderRadius: "10px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-            <CheckCircle2 size={12} /> Synced with Official Meta WhatsApp Cloud API Schedule (India +91)
-          </span>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "12px",
-          }}
-        >
-          {[
-            {
-              category: "marketing",
-              label: "Marketing Messages",
-              rate: summary?.rates?.marketing ? `₹${summary.rates.marketing}` : "₹1.015",
-              desc: "Meta Base ₹0.86 + 18% GST (Official)",
-              count: summary?.breakdown?.marketing?.count || 0,
-              spent: summary?.breakdown?.marketing?.spent || 0,
-              color: "#7c3aed",
-              bg: "rgba(124, 58, 237, 0.06)",
-            },
-            {
-              category: "utility",
-              label: "Utility Updates",
-              rate: summary?.rates?.utility ? `₹${summary.rates.utility}` : "₹0.413",
-              desc: "Order updates, Alerts, Confirmations (+GST)",
-              count: summary?.breakdown?.utility?.count || 0,
-              spent: summary?.breakdown?.utility?.spent || 0,
-              color: "#2563eb",
-              bg: "rgba(37, 99, 235, 0.06)",
-            },
-            {
-              category: "service",
-              label: "Live Chat / Service",
-              rate: summary?.rates?.service ? `₹${summary.rates.service}` : "₹0.354",
-              desc: "Customer responses in 24h window (+GST)",
-              count: summary?.breakdown?.service?.count || 0,
-              spent: summary?.breakdown?.service?.spent || 0,
-              color: "#059669",
-              bg: "rgba(16, 185, 129, 0.06)",
-            },
-            {
-              category: "authentication",
-              label: "Authentication / OTP",
-              rate: summary?.rates?.authentication ? `₹${summary.rates.authentication}` : "₹0.354",
-              desc: "Login codes, Password resets (+GST)",
-              count: summary?.breakdown?.authentication?.count || 0,
-              spent: summary?.breakdown?.authentication?.spent || 0,
-              color: "#d97706",
-              bg: "rgba(217, 119, 6, 0.06)",
-            },
-          ].map((item) => (
-            <div
-              key={item.category}
-              style={{
-                background: item.bg,
-                border: `1px solid ${item.color}25`,
-                borderRadius: "12px",
-                padding: "12px 14px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: item.color }}>{item.label}</span>
-                <span style={{ fontSize: "14px", fontWeight: 800, color: item.color }}>{item.rate}</span>
-              </div>
-              <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "6px" }}>{item.desc}</div>
-              <div style={{ fontSize: "11.5px", fontWeight: 600, color: "#334155" }}>
-                Sent: {item.count} • Spent: ₹{item.spent.toFixed(2)}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Transactions Ledger Card */}
       <div
         style={{
@@ -670,10 +580,10 @@ export default function BillingPage() {
               }}
             >
               <option value="all">All Categories</option>
-              <option value="marketing">Marketing (₹1.015)</option>
-              <option value="utility">Utility (₹0.413)</option>
-              <option value="service">Service / Chat (₹0.354)</option>
-              <option value="authentication">Auth / OTP (₹0.354)</option>
+              <option value="marketing">Marketing Messages</option>
+              <option value="utility">Utility Updates</option>
+              <option value="service">Live Chat / Service</option>
+              <option value="authentication">Authentication / OTP</option>
             </select>
 
             {/* Type Filter */}
