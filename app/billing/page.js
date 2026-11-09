@@ -26,7 +26,9 @@ import {
   getBillingTransactions,
   rechargeClientWallet,
   getClientsDropdown,
+  getAdminBillingClients,
 } from "../lib/api";
+import { getSocket } from "../lib/socket";
 import { useToast } from "../components/ToastProvider";
 
 export default function BillingPage() {
@@ -43,10 +45,12 @@ export default function BillingPage() {
   const [selectedType, setSelectedType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Master Admin State
+  // Master Admin State & Money Management
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
   const [clients, setClients] = useState([]);
+  const [selectedAdminClientId, setSelectedAdminClientId] = useState("all");
+  const [adminClientsList, setAdminClientsList] = useState([]);
   const [rechargeClientId, setRechargeClientId] = useState("");
   const [rechargeAmount, setRechargeAmount] = useState("500");
   const [rechargeDescription, setRechargeDescription] = useState("");
@@ -79,6 +83,10 @@ export default function BillingPage() {
             }
           })
           .catch(() => {});
+
+        getAdminBillingClients()
+          .then((res) => setAdminClientsList(res.data?.clients || []))
+          .catch(() => {});
       }
     } catch (e) {}
   }, []);
@@ -88,14 +96,22 @@ export default function BillingPage() {
     else setLoading(true);
 
     try {
+      const sumParams = {};
+      const txParams = {
+        category: selectedCategory,
+        type: selectedType,
+        search: searchQuery,
+        limit: 100,
+      };
+
+      if (selectedAdminClientId !== "all") {
+        sumParams.client_id = selectedAdminClientId;
+        txParams.client_id = selectedAdminClientId;
+      }
+
       const [sumRes, txRes] = await Promise.all([
-        getBillingSummary(),
-        getBillingTransactions({
-          category: selectedCategory,
-          type: selectedType,
-          search: searchQuery,
-          limit: 100,
-        }),
+        getBillingSummary(sumParams),
+        getBillingTransactions(txParams),
       ]);
 
       setSummary(sumRes.data);
@@ -112,11 +128,35 @@ export default function BillingPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedCategory, selectedType, searchQuery, showSuccess, showError]);
+  }, [selectedCategory, selectedType, searchQuery, selectedAdminClientId, showSuccess, showError]);
 
   useEffect(() => {
     loadBillingData();
   }, [loadBillingData]);
+
+  // Real-time Socket.io Updates for wallet changes & new messages
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleUpdate = () => {
+      loadBillingData(false);
+      if (isMasterAdmin) {
+        getAdminBillingClients()
+          .then((res) => setAdminClientsList(res.data?.clients || []))
+          .catch(() => {});
+      }
+    };
+
+    socket.on("wallet_updated", handleUpdate);
+    socket.on("new_message", handleUpdate);
+    socket.on("campaign_progress", handleUpdate);
+
+    return () => {
+      socket.off("wallet_updated", handleUpdate);
+      socket.off("new_message", handleUpdate);
+      socket.off("campaign_progress", handleUpdate);
+    };
+  }, [loadBillingData, isMasterAdmin]);
 
   const handleRechargeSubmit = async (e) => {
     e.preventDefault();
@@ -189,7 +229,34 @@ export default function BillingPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {isMasterAdmin && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)" }}>Client Ledger:</label>
+              <select
+                value={selectedAdminClientId}
+                onChange={(e) => setSelectedAdminClientId(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--border-color, #cbd5e1)",
+                  background: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="all">🏢 All Clients (Global Aggregated)</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    👤 {c.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {isMasterAdmin && (
             <button
               type="button"
@@ -331,6 +398,90 @@ export default function BillingPage() {
           </p>
         </div>
       </div>
+
+      {/* Master Admin Client Wallets & Money Management Overview */}
+      {isMasterAdmin && adminClientsList.length > 0 && (
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            border: "1px solid var(--border-color, #e2e8f0)",
+            padding: "20px 24px",
+            marginBottom: "24px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                💰 Client Wallets &amp; Money Management
+              </h3>
+              <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "var(--text-muted)" }}>
+                Live balances, total consumption, and instant recharge controls for each client account
+              </p>
+            </div>
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #f1f5f9", background: "#f8fafc" }}>
+                  <th style={{ padding: "8px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11px", textTransform: "uppercase" }}>Client Username</th>
+                  <th style={{ padding: "8px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11px", textTransform: "uppercase" }}>Role</th>
+                  <th style={{ padding: "8px 12px", textAlign: "right", color: "#64748b", fontWeight: 700, fontSize: "11px", textTransform: "uppercase" }}>Available Wallet</th>
+                  <th style={{ padding: "8px 12px", textAlign: "right", color: "#64748b", fontWeight: 700, fontSize: "11px", textTransform: "uppercase" }}>Total Consumed</th>
+                  <th style={{ padding: "8px 12px", textAlign: "center", color: "#64748b", fontWeight: 700, fontSize: "11px", textTransform: "uppercase" }}>Messages Sent</th>
+                  <th style={{ padding: "8px 12px", textAlign: "right", color: "#64748b", fontWeight: 700, fontSize: "11px", textTransform: "uppercase" }}>Quick Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adminClientsList.map((cl) => (
+                  <tr key={cl.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "12px", fontWeight: 700, color: "#0f172a" }}>
+                      👤 {cl.username}
+                    </td>
+                    <td style={{ padding: "12px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 600, padding: "2px 8px", borderRadius: "12px", background: "rgba(37, 99, 235, 0.08)", color: "#2563eb" }}>
+                        Client Workspace
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "right", fontWeight: 800, color: "#059669", fontSize: "14px" }}>
+                      ₹{parseFloat(cl.wallet_balance || 0).toFixed(2)}
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "right", fontWeight: 600, color: "#64748b" }}>
+                      ₹{parseFloat(cl.total_spent || 0).toFixed(2)}
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "center", fontWeight: 600, color: "#0f172a" }}>
+                      {cl.total_messages || 0}
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "right" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRechargeClientId(cl.id);
+                          setIsRechargeModalOpen(true);
+                        }}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "8px",
+                          border: "none",
+                          background: "#002277",
+                          color: "#ffffff",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        + Add Funds
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Official Category Pricing Strip */}
       <div
@@ -523,6 +674,9 @@ export default function BillingPage() {
             <thead>
               <tr style={{ borderBottom: "2px solid #f1f5f9", background: "#f8fafc" }}>
                 <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase" }}>Time &amp; Date</th>
+                {isMasterAdmin && (
+                  <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase" }}>Client</th>
+                )}
                 <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase" }}>Recipient / Target</th>
                 <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase" }}>Category</th>
                 <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase" }}>Description</th>
@@ -534,13 +688,13 @@ export default function BillingPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
+                  <td colSpan={isMasterAdmin ? 8 : 7} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
                     Loading billing statement...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
+                  <td colSpan={isMasterAdmin ? 8 : 7} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
                     No message transactions match your active filters.
                   </td>
                 </tr>
@@ -564,6 +718,24 @@ export default function BillingPage() {
                       <td style={{ padding: "12px", color: "#64748b", whiteSpace: "nowrap", fontSize: "12px" }}>
                         {formattedDate}
                       </td>
+
+                      {/* Client (Master Admin View) */}
+                      {isMasterAdmin && (
+                        <td style={{ padding: "12px", whiteSpace: "nowrap" }}>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              background: "rgba(59, 130, 246, 0.1)",
+                              color: "#2563eb",
+                            }}
+                          >
+                            👤 {tx.client_username || "Direct Inbound"}
+                          </span>
+                        </td>
+                      )}
 
                       {/* Recipient */}
                       <td style={{ padding: "12px", whiteSpace: "nowrap" }}>

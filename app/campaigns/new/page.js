@@ -29,6 +29,7 @@ export default function NewCampaignPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeChannel, setActiveChannel] = useState(null);
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
 
   // Scheduling states
   const [isScheduled, setIsScheduled] = useState(false);
@@ -46,6 +47,15 @@ export default function NewCampaignPage() {
 
         const approvedOnly = (templatesRes.data || []).filter(t => t.status === 'APPROVED');
         setTemplates(approvedOnly);
+
+        if (typeof window !== "undefined") {
+          const role = localStorage.getItem("user_role");
+          const userStr = localStorage.getItem("user");
+          const user = userStr ? JSON.parse(userStr) : null;
+          const activeClientId = localStorage.getItem("active_client_id");
+          const isMaster = (role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani") && !activeClientId;
+          setIsMasterAdmin(isMaster);
+        }
 
         api.get("/api/users/channel-config")
           .then((res) => setActiveChannel(res.data))
@@ -198,8 +208,8 @@ export default function NewCampaignPage() {
               </div>
             )}
 
-            {/* Active Channel Indicator */}
-            {activeChannel && (
+            {/* Active Channel Indicator (Master Admin Only - Hidden from regular clients) */}
+            {isMasterAdmin && activeChannel && (
               <div
                 style={{
                   display: "flex",
