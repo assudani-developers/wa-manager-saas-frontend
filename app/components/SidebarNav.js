@@ -15,6 +15,7 @@ import {
   LogOut,
   LayoutDashboard,
   ShieldCheck,
+  Wallet,
 } from "lucide-react";
 import AccountHealthModal from "./AccountHealthModal";
 import BrandLogo from "./BrandLogo";
@@ -40,9 +41,10 @@ export default function SidebarNav() {
   }
 
   const navItems = [
-    ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "Client Users (SaaS)" }] : []),
+    ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "Client Accounts" }] : []),
     { href: "/chat", icon: MessageCircle, label: "Live Chat" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Analytics" },
+    { href: "/billing", icon: Wallet, label: "Message Funds & Billing" },
     // { href: "/replies", icon: Reply, label: "All Replies" }, // Hidden per request (code preserved)
     { href: "/contacts", icon: Users, label: "Contact Lists" },
     { href: "/campaigns", icon: Megaphone, label: "Campaigns" },
@@ -51,8 +53,9 @@ export default function SidebarNav() {
   ];
 
   const mobileNavItems = [
-    ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "SaaS" }] : []),
+    ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "Clients" }] : []),
     { href: "/chat", icon: MessageCircle, label: "Chat" },
+    { href: "/billing", icon: Wallet, label: "Billing" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Stats" },
     { href: "/contacts", icon: Users, label: "Contacts" },
     { href: "/campaigns", icon: Megaphone, label: "Campaigns" },

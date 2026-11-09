@@ -148,4 +148,9 @@ export const deleteCampaign = (id) => api.delete(`/api/campaigns/${id}`);
 export const addContactToList = (listId, contactData) => api.post(`/api/contact_lists/${listId}/contacts`, contactData);
 export const deleteContactList = (id) => api.delete(`/api/contact_lists/${id}`);
 
+// Billing & Wallet API
+export const getBillingSummary = () => api.get("/api/billing/summary");
+export const getBillingTransactions = (params) => api.get("/api/billing/transactions", { params });
+export const rechargeClientWallet = (data) => api.post("/api/billing/recharge", data);
+
 export default api;

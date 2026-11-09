@@ -202,6 +202,14 @@ export default function MessageBubble({ message, templates, onImageClick, onDele
       }
     }
     
+    if (message.message_body === '[button]') {
+      return (
+        <div className="message-text" style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(0, 34, 119, 0.08)", padding: "4px 10px", borderRadius: "12px", color: "#002277", fontWeight: 600 }}>
+          <span>🔘 Thank You</span>
+        </div>
+      );
+    }
+
     const hiddenMediaLabels = ['[Media]', '[Video]', '[Image]', '[Audio]', '[Document]', '[Sticker]', '[unsupported]'];
     if (hiddenMediaLabels.includes(message.message_body) && (message.media_url || isImageUrl(message.message_body))) {
       return null;
