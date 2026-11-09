@@ -98,6 +98,20 @@ export default function DashboardPage() {
     const socket = getSocket();
 
     const handleNewMessage = (msg) => {
+      // Multi-tenant Scoping: Do NOT show incoming messages/callbacks from contacts of other clients!
+      try {
+        const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+        const role = typeof window !== "undefined" ? localStorage.getItem("user_role") : null;
+        const user = userStr ? JSON.parse(userStr) : null;
+        const currentUserId = user?.id;
+        const activeClientId = typeof window !== "undefined" ? localStorage.getItem("active_client_id") : null;
+        const isMaster = (role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani") && !activeClientId;
+
+        if (!isMaster && msg.contact_user_id && currentUserId && msg.contact_user_id !== currentUserId) {
+          return; // Ignore messages belonging to other clients
+        }
+      } catch (e) {}
+
       const isOutbound = msg.direction === "outbound";
       const target = msg.contact_name || msg.contact_phone || "Customer";
 

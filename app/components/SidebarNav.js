@@ -40,6 +40,20 @@ export default function SidebarNav() {
     const socket = getSocket();
 
     const handleNewMessage = (msg) => {
+      // Multi-tenant check: ignore notifications for other clients' messages
+      try {
+        const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+        const role = typeof window !== "undefined" ? localStorage.getItem("user_role") : null;
+        const user = userStr ? JSON.parse(userStr) : null;
+        const currentUserId = user?.id;
+        const activeClientId = typeof window !== "undefined" ? localStorage.getItem("active_client_id") : null;
+        const isMaster = (role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani") && !activeClientId;
+
+        if (!isMaster && msg.contact_user_id && currentUserId && msg.contact_user_id !== currentUserId) {
+          return;
+        }
+      } catch (e) {}
+
       if (pathname !== "/chat" && msg.direction === "inbound") {
         setHasNewChat(true);
       }
