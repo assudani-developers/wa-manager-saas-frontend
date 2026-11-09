@@ -63,7 +63,10 @@ const getQualityStyle = (quality) => {
 
 export default function SettingsPage() {
   const { showSuccess, showError } = useToast();
-  const [activeTab, setActiveTab] = useState("account"); // account, credentials, webhook, system
+  const [activeTab, setActiveTab] = useState("credentials"); // credentials, team, account, webhook, system
+
+  const [isClientView, setIsClientView] = useState(false);
+  const [activeClientName, setActiveClientName] = useState("");
 
   const [metaHealth, setMetaHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(true);
@@ -82,17 +85,6 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState("");
 
   const [copiedKey, setCopiedKey] = useState(null);
-
-  // Dual Sender Channel State
-  const [channelMode, setChannelMode] = useState("company");
-  const [channelData, setChannelData] = useState(null);
-  const [personalPhoneId, setPersonalPhoneId] = useState("");
-  const [personalWabaId, setPersonalWabaId] = useState("");
-  const [personalToken, setPersonalToken] = useState("");
-  const [showPersonalToken, setShowPersonalToken] = useState(false);
-  const [testingChannel, setTestingChannel] = useState(false);
-  const [channelTestResult, setChannelTestResult] = useState(null);
-  const [savingChannel, setSavingChannel] = useState(false);
 
   // Team Members & Sub-Logins State
   const [teamMembers, setTeamMembers] = useState([]);
@@ -154,6 +146,19 @@ export default function SettingsPage() {
   useEffect(() => {
     let isMounted = true;
 
+    try {
+      const role = localStorage.getItem("user_role");
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
+      const activeClientId = localStorage.getItem("active_client_id");
+      const savedClientName = localStorage.getItem("active_client_name");
+      const clientMode = !isMaster || Boolean(activeClientId);
+      setIsClientView(clientMode);
+      setActiveClientName(savedClientName || user?.username || "Client");
+      setActiveTab("credentials");
+    } catch (e) {}
+
     getAccountHealth()
       .then((res) => {
         if (isMounted) setMetaHealth(res.data);
@@ -165,21 +170,6 @@ export default function SettingsPage() {
       })
       .finally(() => {
         if (isMounted) setHealthLoading(false);
-      });
-
-    getChannelConfig()
-      .then((res) => {
-        if (isMounted && res.data) {
-          setChannelData(res.data);
-          setChannelMode(res.data.active_mode || "company");
-          if (res.data.personal) {
-            setPersonalPhoneId(res.data.personal.phone_id || "");
-            setPersonalWabaId(res.data.personal.waba_id || "");
-          }
-        }
-      })
-      .catch((err) => {
-        console.warn("Could not load channel settings:", err.message);
       });
 
     return () => {
@@ -301,13 +291,27 @@ export default function SettingsPage() {
     }
   };
 
+  const visibleTabs = isClientView
+    ? [
+        { id: "credentials", label: "Account Credentials", icon: UserCog },
+        { id: "team", label: "Team Members & Sub-Logins", icon: Users },
+      ]
+    : [
+        { id: "account", label: "Meta Cloud Account", icon: Smartphone },
+        { id: "credentials", label: "Admin Credentials", icon: UserCog },
+        { id: "webhook", label: "Webhook & API Endpoints", icon: Webhook },
+        { id: "system", label: "System Information", icon: Cpu },
+      ];
+
   return (
     <div className="page-container" style={{ paddingBottom: "40px" }}>
       <div className="page-header" style={{ marginBottom: "20px" }}>
         <div>
           <h1 className="page-title">Settings &amp; Configuration</h1>
           <p style={{ fontSize: "13.5px", color: "var(--text-muted)", margin: "4px 0 0" }}>
-            Manage your Meta WhatsApp Cloud API status, admin credentials, and webhook endpoints
+            {isClientView
+              ? `Manage workspace credentials and team sub-logins for ${activeClientName || "your account"}`
+              : "Manage your Meta WhatsApp Cloud API status, admin credentials, and webhook endpoints"}
           </p>
         </div>
       </div>
@@ -315,31 +319,25 @@ export default function SettingsPage() {
       {/* Modern Segmented Navigation Tabs */}
       <div
         style={{
-          display: "inline-flex",
+          display: "flex",
+          flexWrap: "wrap",
           background: "#f1f5f9",
-          padding: "5px",
+          padding: "6px",
           borderRadius: "14px",
           border: "1px solid #e2e8f0",
-          gap: "6px",
+          gap: "8px",
           marginBottom: "24px",
           maxWidth: "100%",
-          overflowX: "auto",
         }}
       >
-        {[
-          { id: "account", label: "Meta Cloud Account", icon: Smartphone },
-          { id: "channel", label: "Sender Channel (Dual Mode)", icon: Sliders },
-          { id: "team", label: "Team Logins", icon: Users },
-          { id: "credentials", label: "Admin Credentials", icon: UserCog },
-          { id: "webhook", label: "Webhook & API Endpoints", icon: Webhook },
-          { id: "system", label: "System Information", icon: Cpu },
-        ].map((tab) => {
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              type="button"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -366,9 +364,9 @@ export default function SettingsPage() {
 
       <div className="page-content" style={{ maxWidth: "960px" }}>
         {/* ========================================================= */}
-        {/* TAB 1: META CLOUD ACCOUNT HEALTH */}
+        {/* TAB 1: META CLOUD ACCOUNT HEALTH (MASTER ADMIN ONLY) */}
         {/* ========================================================= */}
-        {activeTab === "account" && (
+        {!isClientView && activeTab === "account" && (
           <section className="ui-card animate-fade-in" style={{ transform: "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -471,10 +469,8 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {/* ========================================================= */}
-        {/* TAB: SENDER CHANNEL & DUAL META API MODE */}
-        {/* ========================================================= */}
-        {activeTab === "channel" && (
+        {/* Sender Channel Tab Removed for Clients */}
+        {false && activeTab === "channel" && (
           <section className="ui-card animate-fade-in" style={{ transform: "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
               <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(37, 99, 235, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
@@ -727,7 +723,15 @@ export default function SettingsPage() {
             </div>
 
             {/* Create new sub-login */}
-            <form onSubmit={handleAddTeamMember} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "18px", marginBottom: "24px" }}>
+            <form
+              onSubmit={handleAddTeamMember}
+              autoComplete="off"
+              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "18px", marginBottom: "24px" }}
+            >
+              {/* Hidden dummy fields to prevent browser autofill */}
+              <input type="text" style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
+              <input type="password" style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
+
               <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 14px 0", display: "flex", alignItems: "center", gap: "8px" }}>
                 <UserPlus size={16} color="var(--accent)" />
                 Add New Team Login
@@ -739,6 +743,12 @@ export default function SettingsPage() {
                   </label>
                   <input
                     type="text"
+                    name="team_staff_username_clean"
+                    id="team_staff_username_clean"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
                     value={newTeamUsername}
                     onChange={(e) => setNewTeamUsername(e.target.value)}
                     placeholder="e.g. staff_member"
@@ -754,6 +764,9 @@ export default function SettingsPage() {
                   <div style={{ position: "relative" }}>
                     <input
                       type={showTeamPassword ? "text" : "password"}
+                      name="team_staff_password_clean"
+                      id="team_staff_password_clean"
+                      autoComplete="new-password"
                       value={newTeamPassword}
                       onChange={(e) => setNewTeamPassword(e.target.value)}
                       placeholder="Min 4 characters"
@@ -932,10 +945,12 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h2 style={{ fontSize: "17px", fontWeight: "700", color: "var(--text-primary)", margin: 0 }}>
-                  Admin Security &amp; Login
+                  {isClientView ? "Account Credentials" : "Admin Security & Login"}
                 </h2>
                 <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "2px 0 0" }}>
-                  Update your administrator login credentials
+                  {isClientView
+                    ? "Update your login username and password"
+                    : "Update your administrator login credentials"}
                 </p>
               </div>
             </div>
@@ -1106,9 +1121,9 @@ export default function SettingsPage() {
         )}
 
         {/* ========================================================= */}
-        {/* TAB 3: WEBHOOK & API ENDPOINTS */}
+        {/* TAB 3: WEBHOOK & API ENDPOINTS (MASTER ADMIN ONLY) */}
         {/* ========================================================= */}
-        {activeTab === "webhook" && (
+        {!isClientView && activeTab === "webhook" && (
           <section className="ui-card animate-fade-in" style={{ transform: "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
               <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)" }}>
@@ -1212,9 +1227,9 @@ export default function SettingsPage() {
         )}
 
         {/* ========================================================= */}
-        {/* TAB 4: SYSTEM & PLATFORM INFO */}
+        {/* TAB 4: SYSTEM & PLATFORM INFO (MASTER ADMIN ONLY) */}
         {/* ========================================================= */}
-        {activeTab === "system" && (
+        {!isClientView && activeTab === "system" && (
           <section className="ui-card animate-fade-in" style={{ transform: "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
               <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)" }}>

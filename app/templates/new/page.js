@@ -15,6 +15,8 @@ export default function NewTemplatePage() {
   const [category, setCategory] = useState("MARKETING");
   const [language, setLanguage] = useState("en_US");
   const [headerType, setHeaderType] = useState("NONE");
+  const [headerText, setHeaderText] = useState("");
+  const [footerText, setFooterText] = useState("");
   const [sampleFile, setSampleFile] = useState(null);
   const [samplePreview, setSamplePreview] = useState(null);
   const [selectedGalleryMedia, setSelectedGalleryMedia] = useState(null);
@@ -77,6 +79,12 @@ export default function NewTemplatePage() {
       formData.append("category", category);
       formData.append("text", bodyText.trim());
       formData.append("headerType", headerType);
+      if (headerType === "TEXT" && headerText.trim()) {
+        formData.append("headerText", headerText.trim());
+      }
+      if (footerText.trim()) {
+        formData.append("footerText", footerText.trim());
+      }
       if (buttons && buttons.length > 0) {
         formData.append("buttons", JSON.stringify(buttons));
       }
@@ -188,19 +196,21 @@ export default function NewTemplatePage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Media Header</label>
+                <label className="form-label">Header (Optional)</label>
                 <select
                   className="form-select"
                   value={headerType}
                   onChange={(e) => {
                     setHeaderType(e.target.value);
-                    if (e.target.value === "NONE") {
+                    if (e.target.value === "NONE" || e.target.value === "TEXT") {
                       setSampleFile(null);
                       setSamplePreview(null);
+                      setSelectedGalleryMedia(null);
                     }
                   }}
                 >
-                  <option value="NONE">None (Text Only)</option>
+                  <option value="NONE">None</option>
+                  <option value="TEXT">Text Headline</option>
                   <option value="IMAGE">Image</option>
                   <option value="VIDEO">Video</option>
                   <option value="DOCUMENT">Document (PDF)</option>
@@ -208,7 +218,29 @@ export default function NewTemplatePage() {
               </div>
             </div>
 
-            {headerType !== "NONE" && (
+            {/* Text Header Input */}
+            {headerType === "TEXT" && (
+              <div className="form-group" style={{ background: "var(--bg-tertiary)", padding: "16px", borderRadius: "12px", border: "1px solid var(--border-color)", marginBottom: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <label className="form-label" style={{ margin: 0 }}>Header Text Headline</label>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{headerText.length}/60 chars</span>
+                </div>
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
+                  Bold headline shown at the top of the message (Max 60 characters). Meta does not allow emojis or formatting in headers.
+                </p>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g., Shubh Deepavali Wishes"
+                  maxLength={60}
+                  value={headerText}
+                  onChange={(e) => setHeaderText(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Media Header (Image / Video / Document) */}
+            {["IMAGE", "VIDEO", "DOCUMENT"].includes(headerType) && (
               <div style={{ background: "var(--bg-tertiary)", padding: "18px", borderRadius: "12px", border: "1px dashed var(--border-color)", marginBottom: "24px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                   <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
@@ -325,18 +357,69 @@ export default function NewTemplatePage() {
             )}
 
             <div className="form-group">
-              <label className="form-label">Message Body</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label className="form-label" style={{ margin: 0 }}>Message Body</label>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setBodyText((prev) => prev + " {{1}} ")}
+                    style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "6px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--accent)", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    + {"{{1}}"} Name
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBodyText((prev) => prev + " {{2}} ")}
+                    style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "6px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--accent)", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    + {"{{2}}"} Custom
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBodyText((prev) => prev + " *bold* ")}
+                    style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "6px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-primary)", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    *B*
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBodyText((prev) => prev + " _italic_ ")}
+                    style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "6px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", color: "var(--text-primary)", fontStyle: "italic", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    _I_
+                  </button>
+                </div>
+              </div>
               <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
-                Enter the exact text you want to send. (Variables like {'{{1}}'} are currently not supported in this simple builder).
+                Enter the text you want to send. Use {"{{1}}"}, {"{{2}}"} for personalized fields like name or custom details.
               </p>
               <textarea
                 className="form-input"
                 rows={6}
-                placeholder="Hello! We have a special offer for you..."
+                placeholder="Hello {{1}}! We have a special festive announcement for you..."
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
                 required
                 style={{ resize: "vertical" }}
+              />
+            </div>
+
+            {/* Footer Text (Optional) */}
+            <div className="form-group" style={{ marginTop: "18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label className="form-label" style={{ margin: 0 }}>Footer Text (Optional)</label>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{footerText.length}/60 chars</span>
+              </div>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
+                Small muted text shown at the bottom of the message (Max 60 characters).
+              </p>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g., Assudani Developers • Reply STOP to unsubscribe"
+                maxLength={60}
+                value={footerText}
+                onChange={(e) => setFooterText(e.target.value)}
               />
             </div>
 
@@ -425,6 +508,11 @@ export default function NewTemplatePage() {
               
               <div style={{ background: 'white', borderRadius: '8px', padding: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', maxWidth: '90%', borderTopLeftRadius: '0' }}>
                 
+                {headerType === 'TEXT' && headerText && (
+                  <div style={{ fontWeight: '700', fontSize: '15px', color: '#111827', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+                    {headerText}
+                  </div>
+                )}
                 {headerType === 'IMAGE' && (
                   <div style={{ width: '100%', background: '#f1f5f9', borderRadius: '6px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', overflow: 'hidden', minHeight: samplePreview ? 'auto' : '140px' }}>
                     {samplePreview ? (
@@ -447,6 +535,12 @@ export default function NewTemplatePage() {
                 <div style={{ fontSize: '14px', color: '#111', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
                   {bodyText || 'Your message text will appear here...'}
                 </div>
+                
+                {footerText && (
+                  <div style={{ fontSize: '12px', color: '#667781', marginTop: '6px' }}>
+                    {footerText}
+                  </div>
+                )}
                 
                 <div style={{ fontSize: '11px', color: '#667781', textAlign: 'right', marginTop: '4px' }}>12:00 PM</div>
               </div>
