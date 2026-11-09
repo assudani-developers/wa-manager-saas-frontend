@@ -5,7 +5,7 @@ import { getContacts, getMessages, markMessagesAsRead } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import ChatSidebar from "./components/ChatSidebar";
 import ChatWindow from "./components/ChatWindow";
-import { MessageCircle, ShieldCheck, Zap, Lock } from "lucide-react";
+import { MessageCircle, ShieldCheck, Zap, Lock, UserPlus, Phone, X, Search } from "lucide-react";
 import BrandLogo from "../components/BrandLogo";
 import { useToast } from "../components/ToastProvider";
 
@@ -31,6 +31,12 @@ export default function ChatPage() {
   const [adminScope, setAdminScope] = useState("all");
   const [adminClientFilter, setAdminClientFilter] = useState("all");
   const [clientsList, setClientsList] = useState([]);
+
+  // New 1-to-1 Chat State
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [newChatPhone, setNewChatPhone] = useState("");
+  const [newChatName, setNewChatName] = useState("");
+  const [newChatLoading, setNewChatLoading] = useState(false);
 
   const { showSuccess, showError } = useToast();
 
@@ -169,6 +175,38 @@ export default function ChatPage() {
     }
   }, [selectedContact, showSuccess, showError]);
 
+  const handleStartNewChat = async (e) => {
+    if (e) e.preventDefault();
+    if (!newChatPhone.trim()) return;
+
+    setNewChatLoading(true);
+    try {
+      const { default: api } = await import("../lib/api");
+      const res = await api.post("/api/contacts", {
+        phone_number: newChatPhone.trim(),
+        name: newChatName.trim() || undefined,
+      });
+
+      const contactData = res.data?.contact;
+      if (contactData) {
+        setContacts((prev) => {
+          const exists = prev.some((c) => String(c.id) === String(contactData.id));
+          return exists ? prev : [contactData, ...prev];
+        });
+        handleSelectContact(contactData);
+        setShowNewChatModal(false);
+        setNewChatPhone("");
+        setNewChatName("");
+        showSuccess(res.data.message || "Conversation ready!");
+      }
+    } catch (err) {
+      console.error("Failed to start new chat:", err);
+      showError(err.response?.data?.error || "Failed to start conversation. Please check the number.");
+    } finally {
+      setNewChatLoading(false);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     fetchContacts();
@@ -176,18 +214,32 @@ export default function ChatPage() {
 
   // Auto-select contact from URL parameter (e.g. /chat?contact=123)
   useEffect(() => {
-    if (typeof window === "undefined" || !contacts.length) return;
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const targetContactId = params.get("contact") || params.get("contactId");
     if (targetContactId) {
       const found = contacts.find(
         (c) => String(c.id) === String(targetContactId) || c.phone_number === targetContactId
       );
-      if (found && String(selectedContact?.id) !== String(found.id)) {
-        handleSelectContact(found);
+      if (found) {
+        if (String(selectedContact?.id) !== String(found.id)) {
+          handleSelectContact(found);
+        }
+      } else if (!loading) {
+        // Fetch contact directly if not in initial list
+        import("../lib/api").then(({ getContact }) => {
+          getContact(targetContactId)
+            .then((res) => {
+              if (res.data) {
+                setContacts((prev) => [res.data, ...prev.filter(c => c.id !== res.data.id)]);
+                handleSelectContact(res.data);
+              }
+            })
+            .catch(() => {});
+        });
       }
     }
-  }, [contacts, selectedContact, handleSelectContact]);
+  }, [contacts, loading, selectedContact, handleSelectContact]);
 
   // Socket.io real-time updates
   useEffect(() => {
@@ -365,6 +417,7 @@ export default function ChatPage() {
           clientsList={clientsList}
           adminClientFilter={adminClientFilter}
           onClientFilterChange={setAdminClientFilter}
+          onOpenNewChat={() => setShowNewChatModal(true)}
         />
       </div>
 
@@ -411,10 +464,137 @@ export default function ChatPage() {
               >
                 <Lock size={14} /> End-to-End Meta Cloud Webhook Synchronized
               </div>
+              <div style={{ marginTop: "24px" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setShowNewChatModal(true)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 20px" }}
+                >
+                  <UserPlus size={18} />
+                  <span>Start 1-to-1 Conversation</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Start 1-to-1 Chat Modal */}
+      {showNewChatModal && (
+        <div className="modal-overlay" onClick={() => !newChatLoading && setShowNewChatModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(37, 99, 235, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)" }}>
+                  <UserPlus size={20} />
+                </div>
+                <h2 className="modal-title" style={{ margin: 0, fontSize: "18px" }}>Start 1-to-1 Conversation</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewChatModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                disabled={newChatLoading}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleStartNewChat}>
+              <div className="form-group" style={{ marginBottom: "16px" }}>
+                <label className="form-label">WhatsApp Mobile Number *</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  placeholder="e.g., 919876543210 or 9876543210"
+                  value={newChatPhone}
+                  onChange={(e) => setNewChatPhone(e.target.value)}
+                  disabled={newChatLoading}
+                  required
+                  autoFocus
+                />
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
+                  Enter 10-digit number or with country code 91.
+                </span>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: "20px" }}>
+                <label className="form-label">Contact Name (Optional)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g., Kushagra Gupta"
+                  value={newChatName}
+                  onChange={(e) => setNewChatName(e.target.value)}
+                  disabled={newChatLoading}
+                />
+              </div>
+
+              {/* Quick Matching from Saved Contacts */}
+              {newChatPhone.trim().length >= 2 && (
+                <div style={{ marginBottom: "20px", maxHeight: "160px", overflowY: "auto", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "6px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", padding: "4px 8px" }}>
+                    Matching Contacts from Directory:
+                  </div>
+                  {contacts
+                    .filter((c) =>
+                      c.phone_number?.includes(newChatPhone.trim()) ||
+                      c.name?.toLowerCase().includes(newChatPhone.trim().toLowerCase())
+                    )
+                    .slice(0, 5)
+                    .map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          handleSelectContact(c);
+                          setShowNewChatModal(false);
+                          setNewChatPhone("");
+                          setNewChatName("");
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 10px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          background: "var(--bg-secondary)",
+                          marginBottom: "4px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{c.name || "Customer"}</div>
+                          <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>+{c.phone_number}</div>
+                        </div>
+                        <span style={{ fontSize: "11px", color: "var(--accent)", fontWeight: 600 }}>Open Chat →</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowNewChatModal(false)}
+                  disabled={newChatLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={newChatLoading || !newChatPhone.trim()}
+                >
+                  {newChatLoading ? "Opening..." : "Open Conversation"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

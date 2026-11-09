@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Phone, MapPin, Plus, Trash2, X, Edit, AlertCircle } from "lucide-react";
+import { ArrowLeft, Users, Phone, MapPin, Plus, Trash2, X, Edit, AlertCircle, MessageSquare } from "lucide-react";
 import { getListContacts, deleteContact, addContactToList, updateContact } from "../../lib/api";
 import { useToast } from "../../components/ToastProvider";
 
@@ -181,6 +181,25 @@ export default function ListContactsPage() {
                     </td>
                     <td style={{ padding: "16px 20px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <Link
+                          href={`/chat?contact=${c.id}`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            padding: "4px 8px",
+                            borderRadius: "6px",
+                            background: "rgba(37, 99, 235, 0.08)",
+                            color: "var(--accent, #2563eb)",
+                            textDecoration: "none",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                          }}
+                          title="Open Live Chat / Send WhatsApp Message"
+                        >
+                          <MessageSquare size={14} />
+                          <span>Chat</span>
+                        </Link>
                         <button 
                           onClick={() => handleEditClick(c)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}

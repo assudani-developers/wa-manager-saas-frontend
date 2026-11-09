@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import ContactItem from "./ContactItem";
 
 const FILTERS = [
@@ -25,26 +25,51 @@ export default function ChatSidebar({
   clientsList = [],
   adminClientFilter = "all",
   onClientFilterChange,
+  onOpenNewChat,
 }) {
   return (
     <aside className="chat-sidebar">
       <div className="chat-sidebar-header">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
           <h1 className="chat-sidebar-title" style={{ margin: 0 }}>Chats</h1>
-          {isMasterAdmin && (
-            <span
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              type="button"
+              onClick={() => onOpenNewChat?.()}
               style={{
-                fontSize: "11px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "5px 10px",
+                borderRadius: "8px",
+                background: "var(--accent, #2563eb)",
+                color: "#ffffff",
+                border: "none",
+                fontSize: "12px",
                 fontWeight: "600",
-                padding: "2px 8px",
-                borderRadius: "12px",
-                background: "rgba(99, 102, 241, 0.12)",
-                color: "#6366f1",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
               }}
+              title="Start a new 1-to-1 WhatsApp conversation"
             >
-              Master View
-            </span>
-          )}
+              <UserPlus size={14} />
+              <span>New Chat</span>
+            </button>
+            {isMasterAdmin && (
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  padding: "2px 8px",
+                  borderRadius: "12px",
+                  background: "rgba(99, 102, 241, 0.12)",
+                  color: "#6366f1",
+                }}
+              >
+                Master View
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Master Admin Scope Tabs: All Chats, Client Chats, Direct Inbound */}
