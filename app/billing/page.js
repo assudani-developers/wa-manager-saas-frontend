@@ -513,8 +513,8 @@ export default function BillingPage() {
             {
               category: "marketing",
               label: "Marketing Messages",
-              rate: "₹0.85",
-              desc: "Promotions, Offers, Deepavali Wishes",
+              rate: summary?.rates?.marketing ? `₹${summary.rates.marketing}` : "₹1.015",
+              desc: "Meta Base ₹0.86 + 18% GST (Official)",
               count: summary?.breakdown?.marketing?.count || 0,
               spent: summary?.breakdown?.marketing?.spent || 0,
               color: "#7c3aed",
@@ -523,8 +523,8 @@ export default function BillingPage() {
             {
               category: "utility",
               label: "Utility Updates",
-              rate: "₹0.35",
-              desc: "Order updates, Alerts, Confirmations",
+              rate: summary?.rates?.utility ? `₹${summary.rates.utility}` : "₹0.413",
+              desc: "Order updates, Alerts, Confirmations (+GST)",
               count: summary?.breakdown?.utility?.count || 0,
               spent: summary?.breakdown?.utility?.spent || 0,
               color: "#2563eb",
@@ -533,8 +533,8 @@ export default function BillingPage() {
             {
               category: "service",
               label: "Live Chat / Service",
-              rate: "₹0.30",
-              desc: "Customer responses in 24h window",
+              rate: summary?.rates?.service ? `₹${summary.rates.service}` : "₹0.354",
+              desc: "Customer responses in 24h window (+GST)",
               count: summary?.breakdown?.service?.count || 0,
               spent: summary?.breakdown?.service?.spent || 0,
               color: "#059669",
@@ -543,8 +543,8 @@ export default function BillingPage() {
             {
               category: "authentication",
               label: "Authentication / OTP",
-              rate: "₹0.30",
-              desc: "Login codes, Password resets",
+              rate: summary?.rates?.authentication ? `₹${summary.rates.authentication}` : "₹0.354",
+              desc: "Login codes, Password resets (+GST)",
               count: summary?.breakdown?.authentication?.count || 0,
               spent: summary?.breakdown?.authentication?.spent || 0,
               color: "#d97706",
@@ -640,10 +640,10 @@ export default function BillingPage() {
               }}
             >
               <option value="all">All Categories</option>
-              <option value="marketing">Marketing (₹0.85)</option>
-              <option value="utility">Utility (₹0.35)</option>
-              <option value="service">Service / Chat (₹0.30)</option>
-              <option value="authentication">Auth / OTP (₹0.30)</option>
+              <option value="marketing">Marketing (₹1.015)</option>
+              <option value="utility">Utility (₹0.413)</option>
+              <option value="service">Service / Chat (₹0.354)</option>
+              <option value="authentication">Auth / OTP (₹0.354)</option>
             </select>
 
             {/* Type Filter */}
