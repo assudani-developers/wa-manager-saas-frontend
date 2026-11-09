@@ -340,8 +340,13 @@ export default function BillingPage() {
           boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
         }}
       >
-        <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#475569", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-          Official Category Rates (INR / Message)
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+          <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Official Category Rates (INR / Message)
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669", background: "rgba(16, 185, 129, 0.1)", padding: "2px 8px", borderRadius: "10px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            <CheckCircle2 size={12} /> Synced with Official Meta WhatsApp Cloud API Schedule (India +91)
+          </span>
         </div>
         <div
           style={{
@@ -815,3 +820,4 @@ export default function BillingPage() {
     </div>
   );
 }
+
