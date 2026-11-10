@@ -178,18 +178,19 @@ export default function NewCampaignPage() {
 
       const res = await api.post("/api/campaigns", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
       });
 
-      const launchMsg = `Campaign "${res.data.campaign.name}" launched successfully! Processing ${res.data.campaign.total_recipients} recipients...`;
+      const launchMsg = `Campaign "${res.data?.campaign?.name || name}" launched successfully! Processing ${res.data?.campaign?.total_recipients || ""} recipients...`;
       setSuccess(launchMsg);
       showSuccess(launchMsg);
 
       setTimeout(() => {
         router.push("/campaigns");
-      }, 2000);
+      }, 1500);
     } catch (err) {
       console.error("Campaign creation failed:", err);
-      const errMsg = err.response?.data?.error || "Failed to create campaign";
+      const errMsg = err.response?.data?.error || (err.code === "ECONNABORTED" ? "Upload timed out. Please try with a smaller video file or use Media Gallery." : err.message) || "Failed to create campaign";
       setError(errMsg);
       showError(errMsg);
     } finally {
@@ -575,7 +576,7 @@ export default function NewCampaignPage() {
                 {submitting ? (
                   <>
                     <div className="loading-spinner" style={{ width: "18px", height: "18px", borderWidth: "3px" }} />
-                    {isScheduled ? "Scheduling..." : "Starting..."}
+                    {mediaFile ? "Uploading Video & Launching..." : isScheduled ? "Scheduling..." : "Launching..."}
                   </>
                 ) : (
                   <>

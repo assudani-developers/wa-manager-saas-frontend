@@ -9,7 +9,7 @@ const API_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
+  timeout: 120000, // 2 minutes timeout to comfortably support large video uploads and campaign dispatches
   headers: {
     "Content-Type": "application/json",
   },
