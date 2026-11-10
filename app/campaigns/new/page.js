@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Megaphone, ArrowLeft, X, Image as ImageIcon, FolderOpen, Upload, Calendar, Clock, Send } from "lucide-react";
+import { Megaphone, ArrowLeft, X, Image as ImageIcon, FolderOpen, Upload, Calendar, Clock, Send, Video } from "lucide-react";
 import api, { normalizeMediaUrl } from "../../lib/api";
 import { useToast } from "../../components/ToastProvider";
 import MediaPickerModal from "../../components/MediaPickerModal";
@@ -107,7 +107,7 @@ export default function NewCampaignPage() {
   let previewMediaUrl = null;
   if (selectedGalleryMedia) {
     previewMediaUrl = normalizeMediaUrl(selectedGalleryMedia.media_url);
-  } else if (mediaFile && mediaFile.type?.startsWith("image/")) {
+  } else if (mediaFile && (mediaFile.type?.startsWith("image/") || mediaFile.type?.startsWith("video/"))) {
     previewMediaUrl = URL.createObjectURL(mediaFile);
   } else if (headerComponent?.example?.header_handle?.[0]?.startsWith("http")) {
     previewMediaUrl = headerComponent.example.header_handle[0];
@@ -323,17 +323,24 @@ export default function NewCampaignPage() {
                 {/* Selected Gallery Media Card */}
                 {selectedGalleryMedia ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "14px", background: "var(--bg-primary)", padding: "12px 14px", borderRadius: "12px", border: "1px solid var(--border-color)", marginBottom: "8px" }}>
-                    <img
-                      src={normalizeMediaUrl(selectedGalleryMedia.media_url)}
-                      alt="Selected"
-                      style={{ width: "64px", height: "64px", borderRadius: "8px", objectFit: "cover" }}
-                    />
+                    {selectedGalleryMedia.resource_type === "video" || selectedGalleryMedia.media_url?.match(/\.(mp4|mov|webm)$/i) ? (
+                      <video
+                        src={normalizeMediaUrl(selectedGalleryMedia.media_url)}
+                        style={{ width: "64px", height: "64px", borderRadius: "8px", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <img
+                        src={normalizeMediaUrl(selectedGalleryMedia.media_url)}
+                        alt="Selected"
+                        style={{ width: "64px", height: "64px", borderRadius: "8px", objectFit: "cover" }}
+                      />
+                    )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {selectedGalleryMedia.original_name || "Gallery Media"}
                       </div>
                       <span style={{ fontSize: "11px", color: "var(--secondary-accent)", fontWeight: "500", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                        ✓ Selected from Media Gallery
+                        ✓ Selected from Media Gallery ({selectedGalleryMedia.resource_type || "media"})
                       </span>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
@@ -358,14 +365,14 @@ export default function NewCampaignPage() {
                 ) : mediaFile ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "14px", background: "var(--bg-primary)", padding: "12px 14px", borderRadius: "12px", border: "1px solid var(--border-color)", marginBottom: "8px" }}>
                     <div style={{ width: "64px", height: "64px", borderRadius: "8px", background: "var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)" }}>
-                      <ImageIcon size={28} />
+                      {mediaFile.type?.startsWith("video/") ? <Video size={28} /> : <ImageIcon size={28} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {mediaFile.name}
                       </div>
                       <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                        {(mediaFile.size / (1024 * 1024)).toFixed(2)} MB • Ready to upload from device
+                        {(mediaFile.size / (1024 * 1024)).toFixed(2)} MB • {mediaFile.type?.startsWith("video/") ? "Video File" : "Device File"} • Ready to upload
                       </span>
                     </div>
                     <button
@@ -609,16 +616,25 @@ export default function NewCampaignPage() {
                 <div style={{ background: "white", borderRadius: "10px", padding: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.12)", maxWidth: "96%", borderTopLeftRadius: "2px" }}>
                   {/* Header Image / Media */}
                   {requiresMediaHeader && (
-                    <div style={{ width: "100%", background: "#f1f5f9", borderRadius: "6px", marginBottom: "8px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: "100%", background: "#0f172a", borderRadius: "6px", marginBottom: "8px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {previewMediaUrl ? (
-                        <img
-                          src={previewMediaUrl}
-                          alt="Header Preview"
-                          style={{ width: "100%", height: "auto", maxHeight: "320px", objectFit: "contain", display: "block", borderRadius: "6px" }}
-                        />
+                        requiredMediaFormat === "VIDEO" || selectedGalleryMedia?.resource_type === "video" || mediaFile?.type?.startsWith("video/") ? (
+                          <video
+                            src={previewMediaUrl}
+                            controls
+                            playsInline
+                            style={{ width: "100%", maxHeight: "280px", display: "block", borderRadius: "6px" }}
+                          />
+                        ) : (
+                          <img
+                            src={previewMediaUrl}
+                            alt="Header Preview"
+                            style={{ width: "100%", height: "auto", maxHeight: "320px", objectFit: "contain", display: "block", borderRadius: "6px" }}
+                          />
+                        )
                       ) : (
-                        <div style={{ padding: "28px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", color: "#64748b" }}>
-                          <ImageIcon size={28} />
+                        <div style={{ padding: "28px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", color: "#94a3b8" }}>
+                          {requiredMediaFormat === "VIDEO" ? <Video size={28} /> : <ImageIcon size={28} />}
                           <span style={{ fontSize: "11px" }}>Attach or select {requiredMediaFormat.toLowerCase()}</span>
                         </div>
                       )}

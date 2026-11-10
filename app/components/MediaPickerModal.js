@@ -293,9 +293,18 @@ export default function MediaPickerModal({ isOpen, onClose, onSelect, mediaType 
                           }}
                         />
                       ) : isVid ? (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: "var(--text-muted)" }}>
-                          <Video size={28} />
-                          <span style={{ fontSize: "11px" }}>Video</span>
+                        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+                          <video
+                            src={src}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                          <div style={{ position: "absolute", bottom: "6px", left: "6px", background: "rgba(0,0,0,0.7)", color: "white", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", display: "flex", alignItems: "center", gap: "4px", pointerEvents: "none" }}>
+                            <Video size={12} />
+                            <span>Video</span>
+                          </div>
                         </div>
                       ) : (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: "var(--text-muted)" }}>

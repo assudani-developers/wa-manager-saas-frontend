@@ -27,7 +27,7 @@ export default function NewTemplatePage() {
   const handleSampleFileChange = (e) => {
     const file = e.target.files[0] || null;
     setSampleFile(file);
-    if (file && file.type.startsWith("image/")) {
+    if (file && (file.type.startsWith("image/") || file.type.startsWith("video/"))) {
       const url = URL.createObjectURL(file);
       setSamplePreview(url);
     } else {
@@ -257,17 +257,24 @@ export default function NewTemplatePage() {
 
                 {selectedGalleryMedia ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--bg-primary)", padding: "10px 14px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
-                    <img
-                      src={normalizeMediaUrl(selectedGalleryMedia.media_url)}
-                      alt="Selected"
-                      style={{ width: "54px", height: "54px", borderRadius: "8px", objectFit: "cover" }}
-                    />
+                    {selectedGalleryMedia.resource_type === "video" || selectedGalleryMedia.media_url?.match(/\.(mp4|mov|webm)$/i) ? (
+                      <video
+                        src={normalizeMediaUrl(selectedGalleryMedia.media_url)}
+                        style={{ width: "54px", height: "54px", borderRadius: "8px", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <img
+                        src={normalizeMediaUrl(selectedGalleryMedia.media_url)}
+                        alt="Selected"
+                        style={{ width: "54px", height: "54px", borderRadius: "8px", objectFit: "cover" }}
+                      />
+                    )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {selectedGalleryMedia.original_name || "Gallery Media"}
                       </div>
                       <span style={{ fontSize: "11px", color: "var(--secondary-accent)", fontWeight: "500" }}>
-                        ✓ Selected from Media Gallery
+                        ✓ Selected from Media Gallery ({selectedGalleryMedia.resource_type || "media"})
                       </span>
                     </div>
                     <div style={{ display: "flex", gap: "6px" }}>
@@ -295,14 +302,14 @@ export default function NewTemplatePage() {
                 ) : sampleFile ? (
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--bg-primary)", padding: "10px 14px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
                     <div style={{ width: "54px", height: "54px", borderRadius: "8px", background: "var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)" }}>
-                      <ImageIcon size={24} />
+                      {sampleFile.type?.startsWith("video/") ? <Video size={24} /> : <ImageIcon size={24} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {sampleFile.name}
                       </div>
                       <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                        {(sampleFile.size / (1024 * 1024)).toFixed(2)} MB • Device File
+                        {(sampleFile.size / (1024 * 1024)).toFixed(2)} MB • {sampleFile.type?.startsWith("video/") ? "Video File" : "Device File"}
                       </span>
                     </div>
                     <button
@@ -529,7 +536,23 @@ export default function NewTemplatePage() {
                     )}
                   </div>
                 )}
-                {headerType === 'VIDEO' && <div style={{ width: '100%', height: '140px', background: '#cbd5e1', borderRadius: '6px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}><Video size={32} /></div>}
+                {headerType === 'VIDEO' && (
+                  <div style={{ width: '100%', background: '#0f172a', borderRadius: '6px', marginBottom: '8px', overflow: 'hidden', minHeight: samplePreview ? 'auto' : '140px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {samplePreview ? (
+                      <video
+                        src={samplePreview}
+                        controls
+                        playsInline
+                        style={{ width: '100%', maxHeight: '280px', display: 'block', borderRadius: '6px' }}
+                      />
+                    ) : (
+                      <div style={{ padding: '36px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
+                        <Video size={32} />
+                        <span style={{ fontSize: '11px' }}>Video Header (Sample MP4)</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {headerType === 'DOCUMENT' && <div style={{ width: '100%', padding: '16px', background: '#e2e8f0', borderRadius: '6px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}><FileText color="#64748b" size={24} /><span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>Document.pdf</span></div>}
                 
                 <div style={{ fontSize: '14px', color: '#111', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
