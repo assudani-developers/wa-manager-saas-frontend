@@ -524,7 +524,7 @@ export default function ChatPage() {
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g., Kushagra Gupta"
+                  placeholder="e.g., Customer Name"
                   value={newChatName}
                   onChange={(e) => setNewChatName(e.target.value)}
                   disabled={newChatLoading}

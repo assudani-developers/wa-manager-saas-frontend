@@ -1657,7 +1657,7 @@ export default function UsersManagementPage() {
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. 1366163213257958"
+                        placeholder="e.g. 1029384756102938"
                         value={formData.meta_phone_number_id}
                         onChange={(e) => setFormData({ ...formData, meta_phone_number_id: e.target.value })}
                         style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", background: "#ffffff" }}
@@ -1670,7 +1670,7 @@ export default function UsersManagementPage() {
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. 1803067844072238"
+                        placeholder="e.g. 9876543210987654"
                         value={formData.meta_waba_id}
                         onChange={(e) => setFormData({ ...formData, meta_waba_id: e.target.value })}
                         style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", background: "#ffffff" }}

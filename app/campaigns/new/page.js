@@ -612,7 +612,7 @@ export default function NewCampaignPage() {
             </div>
 
             {/* Chat Wallpaper Area */}
-            <div style={{ padding: "18px 14px", backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundSize: "cover", minHeight: "360px" }}>
+            <div style={{ padding: "18px 14px", backgroundColor: "#efeae2", backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "16px 16px", minHeight: "360px" }}>
               {selectedTemplate ? (
                 <div style={{ background: "white", borderRadius: "10px", padding: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.12)", maxWidth: "96%", borderTopLeftRadius: "2px" }}>
                   {/* Header Image / Media */}

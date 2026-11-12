@@ -764,7 +764,7 @@ export default function CampaignDetailPage() {
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "4px" }}>Message Template</h3>
                 <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px" }}>Preview of dispatched template</p>
 
-                <div style={{ background: "#e5ddd5", padding: "16px", borderRadius: "12px", backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundSize: "cover" }}>
+                <div style={{ backgroundColor: "#efeae2", padding: "16px", borderRadius: "12px", backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "16px 16px" }}>
                   <div style={{ background: "white", padding: "12px", borderRadius: "8px", borderTopLeftRadius: "0", boxShadow: "0 1px 2px rgba(0,0,0,0.1)", fontSize: "14px" }}>
                     {template ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

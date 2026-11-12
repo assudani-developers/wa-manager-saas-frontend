@@ -511,7 +511,7 @@ export default function NewTemplatePage() {
             </div>
             
             {/* Chat area */}
-            <div style={{ flex: 1, padding: '20px', backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundSize: 'cover', overflowY: 'auto' }}>
+            <div style={{ flex: 1, padding: '20px', backgroundColor: '#efeae2', backgroundImage: 'radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)', backgroundSize: '16px 16px', overflowY: 'auto' }}>
               
               <div style={{ background: 'white', borderRadius: '8px', padding: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', maxWidth: '90%', borderTopLeftRadius: '0' }}>
                 

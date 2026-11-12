@@ -572,7 +572,7 @@ export default function SettingsPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. 1366163213257958"
+                    placeholder="e.g. 1029384756102938"
                     value={personalPhoneId}
                     onChange={(e) => setPersonalPhoneId(e.target.value)}
                     style={{
@@ -593,7 +593,7 @@ export default function SettingsPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. 1803067844072238"
+                    placeholder="e.g. 9876543210987654"
                     value={personalWabaId}
                     onChange={(e) => setPersonalWabaId(e.target.value)}
                     style={{

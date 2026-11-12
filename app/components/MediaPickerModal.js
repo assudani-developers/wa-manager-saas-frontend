@@ -133,7 +133,7 @@ export default function MediaPickerModal({ isOpen, onClose, onSelect, mediaType 
             />
             <input
               type="text"
-              placeholder="Search images by name..."
+              placeholder="Search media by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
