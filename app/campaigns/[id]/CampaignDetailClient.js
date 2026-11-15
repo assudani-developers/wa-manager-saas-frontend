@@ -20,7 +20,8 @@ import {
   Zap,
   HelpCircle,
   ChevronDown,
-  Play
+  Play,
+  Pause
 } from "lucide-react";
 import api, { normalizeMediaUrl } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -132,12 +133,21 @@ export default function CampaignDetailPage() {
       throttledDataFetch();
     };
 
+    const handleCampaignStatusChanged = (data) => {
+      if (String(data?.campaignId) === String(id)) {
+        setCampaign((prev) => (prev ? { ...prev, status: data.status, is_running: data.status === "in_progress" } : prev));
+        throttledDataFetch();
+      }
+    };
+
     socket.on("campaign_progress", handleCampaignUpdate);
     socket.on("message_status", handleMessageStatus);
+    socket.on("campaign_status_changed", handleCampaignStatusChanged);
 
     return () => {
       socket.off("campaign_progress", handleCampaignUpdate);
       socket.off("message_status", handleMessageStatus);
+      socket.off("campaign_status_changed", handleCampaignStatusChanged);
     };
   }, [id, fetchData]);
 
@@ -365,6 +375,7 @@ export default function CampaignDetailPage() {
   };
 
   const [resuming, setResuming] = useState(false);
+  const [pausing, setPausing] = useState(false);
 
   const handleResumeCampaign = async () => {
     if (resuming) return;
@@ -373,6 +384,7 @@ export default function CampaignDetailPage() {
       const res = await api.post(`/api/campaigns/${id}/resume`);
       if (res.data?.success) {
         showSuccess(res.data.message || "Campaign resumed successfully!");
+        setCampaign((prev) => (prev ? { ...prev, status: "in_progress", is_running: true } : prev));
         await fetchData(true);
       } else {
         showError(res.data?.error || "Failed to resume campaign.");
@@ -382,6 +394,26 @@ export default function CampaignDetailPage() {
       showError(err.response?.data?.error || "Error resuming campaign.");
     } finally {
       setResuming(false);
+    }
+  };
+
+  const handlePauseCampaign = async () => {
+    if (pausing) return;
+    setPausing(true);
+    try {
+      const res = await api.post(`/api/campaigns/${id}/pause`);
+      if (res.data?.success) {
+        showSuccess(res.data.message || "Campaign paused.");
+        setCampaign((prev) => (prev ? { ...prev, status: "paused", is_running: false } : prev));
+        await fetchData(true);
+      } else {
+        showError(res.data?.error || "Failed to pause campaign.");
+      }
+    } catch (err) {
+      console.error("Pause failed:", err);
+      showError(err.response?.data?.error || "Error pausing campaign.");
+    } finally {
+      setPausing(false);
     }
   };
 
@@ -610,7 +642,31 @@ export default function CampaignDetailPage() {
               </button>
             )}
 
-            {Number(campaign?.unsent_count) > 0 && (
+            {/* Pause button when campaign is actively running */}
+            {(campaign?.status === "in_progress" || campaign?.is_running) && (
+              <button
+                onClick={handlePauseCampaign}
+                disabled={pausing}
+                className="btn-secondary"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "rgba(245, 158, 11, 0.12)",
+                  color: "#d97706",
+                  borderColor: "rgba(245, 158, 11, 0.3)",
+                  fontWeight: "600",
+                  padding: "8px 14px",
+                  fontSize: "13px",
+                }}
+              >
+                <Pause size={15} />
+                {pausing ? "Pausing..." : "Pause Campaign"}
+              </button>
+            )}
+
+            {/* ONLY show Resume button if campaign is paused and there are unsent contacts */}
+            {campaign?.status === "paused" && Number(campaign?.unsent_count) > 0 && (
               <button
                 onClick={handleResumeCampaign}
                 disabled={resuming}

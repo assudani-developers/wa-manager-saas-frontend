@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Megaphone, Trash2, Zap, Filter } from "lucide-react";
+import { Plus, Megaphone, Trash2, Zap, Filter, Play, Pause } from "lucide-react";
 import api, { getCampaigns, deleteCampaign } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { format } from "date-fns";
@@ -99,12 +99,27 @@ export default function CampaignsPage() {
       throttledSync();
     };
 
+    const handleCampaignStatusChanged = (data) => {
+      if (data?.campaignId) {
+        setCampaigns((prev) =>
+          prev.map((c) =>
+            String(c.id) === String(data.campaignId)
+              ? { ...c, status: data.status, is_running: data.status === "in_progress" }
+              : c
+          )
+        );
+      }
+      throttledSync();
+    };
+
     socket.on("campaign_progress", handleCampaignProgress);
     socket.on("message_status", handleMessageStatus);
+    socket.on("campaign_status_changed", handleCampaignStatusChanged);
 
     return () => {
       socket.off("campaign_progress", handleCampaignProgress);
       socket.off("message_status", handleMessageStatus);
+      socket.off("campaign_status_changed", handleCampaignStatusChanged);
     };
   }, [selectedClientId, throttledSync]);
 
@@ -410,7 +425,8 @@ export default function CampaignsPage() {
                   </Link>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {Number(campaign.total_recipients) > Number(campaign.total_messages) && (
+                    {/* ONLY show Resume button when campaign is paused and has unsent recipients */}
+                    {campaign.status === "paused" && Number(campaign.total_recipients) > Number(campaign.total_messages) && (
                       <Link
                         href={`/campaigns/${campaign.id}`}
                         style={{
@@ -426,7 +442,30 @@ export default function CampaignsPage() {
                           gap: "4px",
                         }}
                       >
+                        <Play size={12} fill="#2563eb" />
                         <span>Resume ({Number(campaign.total_recipients) - Number(campaign.total_messages)} Unsent)</span>
+                      </Link>
+                    )}
+
+                    {/* When actively sending in progress, show live status badge */}
+                    {(campaign.status === "in_progress" || campaign.is_running) && (
+                      <Link
+                        href={`/campaigns/${campaign.id}`}
+                        style={{
+                          padding: "4px 10px",
+                          background: "rgba(16, 185, 129, 0.12)",
+                          color: "#059669",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          textDecoration: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
+                      >
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+                        <span>Live Sending...</span>
                       </Link>
                     )}
 
