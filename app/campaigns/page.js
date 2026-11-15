@@ -380,7 +380,10 @@ export default function CampaignsPage() {
                     marginTop: "20px",
                     paddingTop: "16px",
                     borderTop: "1px solid var(--border-color)",
-                    textAlign: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "10px",
                   }}
                 >
                   <Link
@@ -388,14 +391,32 @@ export default function CampaignsPage() {
                     style={{
                       color: "var(--accent)",
                       fontWeight: 600,
-                      fontSize: "14px",
+                      fontSize: "13px",
                       textDecoration: "none",
-                      display: "inline-block",
-                      width: "100%",
                     }}
                   >
-                    View Recipients →
+                    View Details →
                   </Link>
+
+                  {Number(campaign.total_failed) > 0 && (
+                    <Link
+                      href={`/campaigns/${campaign.id}`}
+                      style={{
+                        padding: "4px 10px",
+                        background: "rgba(239, 68, 68, 0.1)",
+                        color: "#ef4444",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <span>Resend Failed ({campaign.total_failed})</span>
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

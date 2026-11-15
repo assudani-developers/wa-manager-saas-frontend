@@ -218,7 +218,8 @@ export default function ChatInput({ contactId, windowInfo, onMessageSent }) {
 
     setTemplateSending(true);
     try {
-      const res = await sendTemplate(contactId, templateName.trim(), languageCode, apiComponents);
+      const channelId = selectedTemplate?.usable_on?.[0]?.channel_id || null;
+      const res = await sendTemplate(contactId, templateName.trim(), languageCode, apiComponents, channelId);
       onMessageSent(res.data);
       showSuccess(`Template "${templateName}" sent successfully!`);
       setTemplateName("");

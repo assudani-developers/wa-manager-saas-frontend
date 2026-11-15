@@ -104,11 +104,12 @@ export const sendMedia = (contactId, file) => {
   });
 };
 
-export const sendTemplate = (contactId, templateName, languageCode = "en_US", components = []) =>
+export const sendTemplate = (contactId, templateName, languageCode = "en_US", components = [], channelId = null) =>
   api.post(`/api/messages/${contactId}/template`, {
     template_name: templateName,
     language_code: languageCode,
     components,
+    channel_id: channelId || undefined,
   });
 
 

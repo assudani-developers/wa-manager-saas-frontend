@@ -334,7 +334,13 @@ export default function CampaignDetailPage() {
       const res = await api.post(`/api/campaigns/${id}/retry`, payload);
       if (res.data?.success) {
         showSuccess(res.data.message || `Successfully retried recipients.`);
-        await fetchData();
+        if (res.data.new_campaign_id) {
+          setTimeout(() => {
+            router.push(`/campaigns/${res.data.new_campaign_id}`);
+          }, 1200);
+        } else {
+          await fetchData();
+        }
       } else {
         showError(res.data?.error || "Failed to retry campaign recipients.");
       }
@@ -631,7 +637,7 @@ export default function CampaignDetailPage() {
                       onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
                     >
-                      <span style={{ fontWeight: "600", color: "#111" }}>Resend All Failed</span>
+                      <span style={{ fontWeight: "600", color: "#111" }}>Resend All Failed (New Campaign)</span>
                       <span style={{ background: "#fee2e2", color: "#ef4444", padding: "2px 6px", borderRadius: "10px", fontSize: "11px", fontWeight: "700" }}>{failedCount}</span>
                     </button>
 
