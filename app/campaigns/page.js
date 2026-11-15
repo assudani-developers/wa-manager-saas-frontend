@@ -368,7 +368,43 @@ export default function CampaignsPage() {
                       </span>
                     )}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    {(campaign.status === "in_progress" || campaign.is_running) && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          padding: "3px 8px",
+                          borderRadius: "10px",
+                          background: "rgba(16, 185, 129, 0.12)",
+                          color: "#059669",
+                          fontWeight: 700,
+                          border: "1px solid rgba(16, 185, 129, 0.25)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+                        Live Sending
+                      </span>
+                    )}
+                    {campaign.status === "paused" && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          padding: "3px 8px",
+                          borderRadius: "10px",
+                          background: "rgba(245, 158, 11, 0.12)",
+                          color: "#d97706",
+                          fontWeight: 700,
+                          border: "1px solid rgba(245, 158, 11, 0.25)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        ⏸️ Paused
+                      </span>
+                    )}
                     {campaign.status === "scheduled" && (
                       <span
                         style={{
@@ -379,12 +415,13 @@ export default function CampaignsPage() {
                           color: "#7c3aed",
                           fontWeight: 700,
                           border: "1px solid rgba(124, 58, 237, 0.25)",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         📅 Scheduled
                       </span>
                     )}
-                    <div className="ui-card-badge">
+                    <div className="ui-card-badge" style={{ whiteSpace: "nowrap" }}>
                       {campaign.created_at ? format(new Date(campaign.created_at), "MMM d, yyyy") : ""}
                     </div>
                     <button
@@ -444,12 +481,13 @@ export default function CampaignsPage() {
                 <div
                   style={{
                     marginTop: "20px",
-                    paddingTop: "16px",
+                    paddingTop: "14px",
                     borderTop: "1px solid var(--border-color)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: "10px",
+                    flexWrap: "wrap",
                   }}
                 >
                   <Link
@@ -459,57 +497,41 @@ export default function CampaignsPage() {
                       fontWeight: 600,
                       fontSize: "13px",
                       textDecoration: "none",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     View Details →
                   </Link>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {/* When actively sending in progress: show Live pulse and direct Pause button */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    {/* When actively sending in progress: direct Pause button */}
                     {(campaign.status === "in_progress" || campaign.is_running) && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span
-                          style={{
-                            padding: "4px 8px",
-                            background: "rgba(16, 185, 129, 0.12)",
-                            color: "#059669",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                          }}
-                        >
-                          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
-                          <span>Sending...</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handlePause(campaign.id);
-                          }}
-                          disabled={actionLoadingId === campaign.id}
-                          title="Pause this campaign"
-                          style={{
-                            padding: "4px 10px",
-                            background: "rgba(245, 158, 11, 0.12)",
-                            color: "#d97706",
-                            border: "1px solid rgba(245, 158, 11, 0.3)",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          <Pause size={12} />
-                          <span>{actionLoadingId === campaign.id ? "Pausing..." : "Pause"}</span>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePause(campaign.id);
+                        }}
+                        disabled={actionLoadingId === campaign.id}
+                        title="Pause this campaign"
+                        style={{
+                          padding: "5px 12px",
+                          background: "rgba(245, 158, 11, 0.12)",
+                          color: "#d97706",
+                          border: "1px solid rgba(245, 158, 11, 0.3)",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <Pause size={13} />
+                        <span>{actionLoadingId === campaign.id ? "Pausing..." : "Pause"}</span>
+                      </button>
                     )}
 
                     {/* When NOT actively running and has unsent recipients: show direct Resume button */}
@@ -523,7 +545,7 @@ export default function CampaignsPage() {
                         disabled={actionLoadingId === campaign.id}
                         title="Resume sending to remaining unsent contacts"
                         style={{
-                          padding: "4px 12px",
+                          padding: "5px 12px",
                           background: "#2563eb",
                           color: "#ffffff",
                           border: "none",
@@ -534,11 +556,12 @@ export default function CampaignsPage() {
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "5px",
+                          whiteSpace: "nowrap",
                           boxShadow: "0 2px 6px rgba(37,99,235,0.25)",
                         }}
                       >
                         <Play size={12} fill="#ffffff" />
-                        <span>{actionLoadingId === campaign.id ? "Resuming..." : `Resume (${Number(campaign.total_recipients) - Number(campaign.total_messages)} Unsent)`}</span>
+                        <span>{actionLoadingId === campaign.id ? "Resuming..." : `Resume (${Number(campaign.total_recipients) - Number(campaign.total_messages)})`}</span>
                       </button>
                     )}
 
@@ -546,7 +569,7 @@ export default function CampaignsPage() {
                       <Link
                         href={`/campaigns/${campaign.id}`}
                         style={{
-                          padding: "4px 10px",
+                          padding: "5px 10px",
                           background: "rgba(239, 68, 68, 0.1)",
                           color: "#ef4444",
                           borderRadius: "6px",
@@ -556,6 +579,7 @@ export default function CampaignsPage() {
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         <span>Resend Failed ({campaign.total_failed})</span>
