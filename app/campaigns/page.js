@@ -54,6 +54,46 @@ export default function CampaignsPage() {
     }
   };
 
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  const handlePause = async (campaignId) => {
+    try {
+      setActionLoadingId(campaignId);
+      const res = await api.post(`/api/campaigns/${campaignId}/pause`);
+      showSuccess(res.data?.message || "Campaign paused.");
+      setCampaigns((prev) =>
+        prev.map((c) =>
+          String(c.id) === String(campaignId)
+            ? { ...c, status: "paused", is_running: false }
+            : c
+        )
+      );
+    } catch (err) {
+      showError(err.response?.data?.error || "Failed to pause campaign.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleResume = async (campaignId) => {
+    try {
+      setActionLoadingId(campaignId);
+      const res = await api.post(`/api/campaigns/${campaignId}/resume`);
+      showSuccess(res.data?.message || "Campaign resumed!");
+      setCampaigns((prev) =>
+        prev.map((c) =>
+          String(c.id) === String(campaignId)
+            ? { ...c, status: "in_progress", is_running: true }
+            : c
+        )
+      );
+    } catch (err) {
+      showError(err.response?.data?.error || "Failed to resume campaign.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   useEffect(() => {
     fetchCampaigns(false);
   }, [selectedClientId]);
@@ -425,48 +465,81 @@ export default function CampaignsPage() {
                   </Link>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {/* Show Resume button whenever there are unsent recipients AND it is NOT actively running */}
-                    {!campaign.is_running && campaign.status !== "in_progress" && Number(campaign.total_recipients) > Number(campaign.total_messages) && (
-                      <Link
-                        href={`/campaigns/${campaign.id}`}
-                        style={{
-                          padding: "4px 10px",
-                          background: "rgba(37, 99, 235, 0.1)",
-                          color: "#2563eb",
-                          borderRadius: "6px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          textDecoration: "none",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <Play size={12} fill="#2563eb" />
-                        <span>Resume ({Number(campaign.total_recipients) - Number(campaign.total_messages)} Unsent)</span>
-                      </Link>
+                    {/* When actively sending in progress: show Live pulse and direct Pause button */}
+                    {(campaign.status === "in_progress" || campaign.is_running) && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          style={{
+                            padding: "4px 8px",
+                            background: "rgba(16, 185, 129, 0.12)",
+                            color: "#059669",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+                          <span>Sending...</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePause(campaign.id);
+                          }}
+                          disabled={actionLoadingId === campaign.id}
+                          title="Pause this campaign"
+                          style={{
+                            padding: "4px 10px",
+                            background: "rgba(245, 158, 11, 0.12)",
+                            color: "#d97706",
+                            border: "1px solid rgba(245, 158, 11, 0.3)",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <Pause size={12} />
+                          <span>{actionLoadingId === campaign.id ? "Pausing..." : "Pause"}</span>
+                        </button>
+                      </div>
                     )}
 
-                    {/* When actively sending in progress, show live status badge */}
-                    {(campaign.status === "in_progress" || campaign.is_running) && (
-                      <Link
-                        href={`/campaigns/${campaign.id}`}
+                    {/* When NOT actively running and has unsent recipients: show direct Resume button */}
+                    {!campaign.is_running && campaign.status !== "in_progress" && Number(campaign.total_recipients) > Number(campaign.total_messages) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleResume(campaign.id);
+                        }}
+                        disabled={actionLoadingId === campaign.id}
+                        title="Resume sending to remaining unsent contacts"
                         style={{
-                          padding: "4px 10px",
-                          background: "rgba(16, 185, 129, 0.12)",
-                          color: "#059669",
+                          padding: "4px 12px",
+                          background: "#2563eb",
+                          color: "#ffffff",
+                          border: "none",
                           borderRadius: "6px",
                           fontSize: "12px",
                           fontWeight: 600,
-                          textDecoration: "none",
+                          cursor: "pointer",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "5px",
+                          boxShadow: "0 2px 6px rgba(37,99,235,0.25)",
                         }}
                       >
-                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
-                        <span>Live Sending...</span>
-                      </Link>
+                        <Play size={12} fill="#ffffff" />
+                        <span>{actionLoadingId === campaign.id ? "Resuming..." : `Resume (${Number(campaign.total_recipients) - Number(campaign.total_messages)} Unsent)`}</span>
+                      </button>
                     )}
 
                     {Number(campaign.total_failed) > 0 && (
