@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -81,9 +81,19 @@ export default function CampaignDetailPage() {
   }, [id, fetchData]);
 
   // Real-time Socket.io updates for live campaign progress & delivery status
+  const lastSyncTime = useRef(0);
+
   useEffect(() => {
     if (!id) return;
     const socket = getSocket();
+
+    const throttledDataFetch = () => {
+      const now = Date.now();
+      if (now - lastSyncTime.current > 6000) {
+        lastSyncTime.current = now;
+        fetchData(true);
+      }
+    };
 
     const handleCampaignUpdate = (data) => {
       if (!data?.campaignId || String(data.campaignId) === String(id)) {
@@ -101,7 +111,7 @@ export default function CampaignDetailPage() {
             })
           );
         }
-        fetchData(true);
+        throttledDataFetch();
       }
     };
 
@@ -119,7 +129,7 @@ export default function CampaignDetailPage() {
           })
         );
       }
-      fetchData(true);
+      throttledDataFetch();
     };
 
     socket.on("campaign_progress", handleCampaignUpdate);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Megaphone, Trash2, Zap, Filter } from "lucide-react";
 import api, { getCampaigns, deleteCampaign } from "../lib/api";
@@ -58,6 +58,15 @@ export default function CampaignsPage() {
     fetchCampaigns(false);
   }, [selectedClientId]);
 
+  const lastSyncRef = useRef(0);
+  const throttledSync = useCallback(() => {
+    const now = Date.now();
+    if (now - lastSyncRef.current > 5000) {
+      lastSyncRef.current = now;
+      fetchCampaigns(true);
+    }
+  }, [selectedClientId]);
+
   // Real-time socket updates for campaigns list
   useEffect(() => {
     const socket = getSocket();
@@ -67,25 +76,27 @@ export default function CampaignsPage() {
         setCampaigns((prev) =>
           prev.map((c) => {
             if (String(c.id) === String(data.campaignId)) {
-              const newSent = data.success ? (c.total_sent || 0) + 1 : (c.total_sent || 0);
-              const newFailed = !data.success ? (c.total_failed || 0) + 1 : (c.total_failed || 0);
+              const newSent = data.success ? (Number(c.total_sent) || 0) + 1 : (Number(c.total_sent) || 0);
+              const newFailed = !data.success ? (Number(c.total_failed) || 0) + 1 : (Number(c.total_failed) || 0);
+              const newMessages = (Number(c.total_messages) || 0) + 1;
               return {
                 ...c,
                 total_sent: newSent,
                 total_failed: newFailed,
+                total_messages: newMessages,
               };
             }
             return c;
           })
         );
-        setLiveEvent(`Campaign dispatch active: Processed ${data.phone || "recipient"}`);
-        setTimeout(() => setLiveEvent(null), 3500);
+        setLiveEvent(`Campaign active: ${data.phone || "recipient"}`);
+        setTimeout(() => setLiveEvent(null), 3000);
       }
-      fetchCampaigns(true);
+      throttledSync();
     };
 
     const handleMessageStatus = (data) => {
-      fetchCampaigns(true);
+      throttledSync();
     };
 
     socket.on("campaign_progress", handleCampaignProgress);
@@ -95,7 +106,7 @@ export default function CampaignsPage() {
       socket.off("campaign_progress", handleCampaignProgress);
       socket.off("message_status", handleMessageStatus);
     };
-  }, [selectedClientId]);
+  }, [selectedClientId, throttledSync]);
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this campaign?")) return;
