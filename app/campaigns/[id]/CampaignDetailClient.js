@@ -19,7 +19,8 @@ import {
   ShieldAlert,
   Zap,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Play
 } from "lucide-react";
 import api, { normalizeMediaUrl } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -353,6 +354,27 @@ export default function CampaignDetailPage() {
     }
   };
 
+  const [resuming, setResuming] = useState(false);
+
+  const handleResumeCampaign = async () => {
+    if (resuming) return;
+    setResuming(true);
+    try {
+      const res = await api.post(`/api/campaigns/${id}/resume`);
+      if (res.data?.success) {
+        showSuccess(res.data.message || "Campaign resumed successfully!");
+        await fetchData(true);
+      } else {
+        showError(res.data?.error || "Failed to resume campaign.");
+      }
+    } catch (err) {
+      console.error("Resume failed:", err);
+      showError(err.response?.data?.error || "Error resuming campaign.");
+    } finally {
+      setResuming(false);
+    }
+  };
+
   // Handle Admin Excel Export (.xlsx)
   const handleExportExcel = async () => {
     if (!isAdmin) {
@@ -575,6 +597,28 @@ export default function CampaignDetailPage() {
               >
                 <Download size={15} />
                 {exporting ? "Exporting..." : "Export Excel"}
+              </button>
+            )}
+
+            {Number(campaign?.unsent_count) > 0 && (
+              <button
+                onClick={handleResumeCampaign}
+                disabled={resuming}
+                className="btn-primary"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#2563eb",
+                  borderColor: "#2563eb",
+                  fontWeight: "600",
+                  padding: "8px 14px",
+                  fontSize: "13px",
+                  boxShadow: "0 2px 8px rgba(37,99,235,0.25)"
+                }}
+              >
+                <Play size={15} className={resuming ? "animate-spin" : ""} />
+                {resuming ? "Resuming..." : `Resume Unsent (${campaign.unsent_count})`}
               </button>
             )}
 
@@ -1324,7 +1368,7 @@ export default function CampaignDetailPage() {
               <div style={{ background: "#fff", padding: "24px", borderRadius: "12px", boxShadow: "0 2px 10px rgba(0,0,0,0.02)", height: "100%" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                   <h3 style={{ fontSize: "16px", fontWeight: "600", margin: 0 }}>Categorized Error Analysis</h3>
-                  {failedCount > 0 && (
+                        {failedCount > 0 && (
                     <span style={{ background: "#fee2e2", color: "#dc2626", fontSize: "12px", fontWeight: "700", padding: "2px 8px", borderRadius: "10px" }}>
                       {failedCount} Total Failures
                     </span>

@@ -398,25 +398,47 @@ export default function CampaignsPage() {
                     View Details →
                   </Link>
 
-                  {Number(campaign.total_failed) > 0 && (
-                    <Link
-                      href={`/campaigns/${campaign.id}`}
-                      style={{
-                        padding: "4px 10px",
-                        background: "rgba(239, 68, 68, 0.1)",
-                        color: "#ef4444",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      <span>Resend Failed ({campaign.total_failed})</span>
-                    </Link>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {Number(campaign.total_recipients) > Number(campaign.total_messages) && (
+                      <Link
+                        href={`/campaigns/${campaign.id}`}
+                        style={{
+                          padding: "4px 10px",
+                          background: "rgba(37, 99, 235, 0.1)",
+                          color: "#2563eb",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          textDecoration: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <span>Resume ({Number(campaign.total_recipients) - Number(campaign.total_messages)} Unsent)</span>
+                      </Link>
+                    )}
+
+                    {Number(campaign.total_failed) > 0 && (
+                      <Link
+                        href={`/campaigns/${campaign.id}`}
+                        style={{
+                          padding: "4px 10px",
+                          background: "rgba(239, 68, 68, 0.1)",
+                          color: "#ef4444",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          textDecoration: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <span>Resend Failed ({campaign.total_failed})</span>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
