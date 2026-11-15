@@ -26,6 +26,9 @@ export default function NewCampaignPage() {
   const [contactLists, setContactLists] = useState([]);
   const [loadingLists, setLoadingLists] = useState(true);
 
+  const [senderChannels, setSenderChannels] = useState([]);
+  const [selectedChannelId, setSelectedChannelId] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -40,14 +43,24 @@ export default function NewCampaignPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [listsRes, templatesRes] = await Promise.all([
+        const [listsRes, templatesRes, channelsRes] = await Promise.all([
           api.get("/api/contact_lists"),
-          api.get("/api/templates")
+          api.get("/api/templates"),
+          api.get("/api/users/channels").catch(() => ({ data: { channels: [] } }))
         ]);
         setContactLists(listsRes.data);
 
         const approvedOnly = (templatesRes.data || []).filter(t => t.status === 'APPROVED');
         setTemplates(approvedOnly);
+
+        const chList = channelsRes.data?.channels || [];
+        setSenderChannels(chList);
+        const def = chList.find((c) => c.is_default) || chList[0];
+        if (def) {
+          setSelectedChannelId(def.id);
+        } else if (channelsRes.data?.company) {
+          setSelectedChannelId("company");
+        }
 
         if (typeof window !== "undefined") {
           const role = localStorage.getItem("user_role");
@@ -160,6 +173,9 @@ export default function NewCampaignPage() {
       formData.append("template_name", templateName.trim());
       formData.append("language_code", languageCode);
       formData.append("contact_list_ids", JSON.stringify(selectedListIds));
+      if (selectedChannelId) {
+        formData.append("sender_channel_id", selectedChannelId);
+      }
       if (isScheduled && scheduleDate && scheduleTime) {
         const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
         formData.append("scheduled_at", scheduledDateTime.toISOString());
@@ -272,6 +288,69 @@ export default function NewCampaignPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+            </div>
+
+            {/* WhatsApp Sender Number Selector (Multiple Numbers Supported) */}
+            <div className="form-group">
+              <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>WhatsApp Sender Number (भेजने वाला नंबर)</span>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "normal" }}>
+                  {senderChannels.length > 1 ? `${senderChannels.length} Numbers Available` : "Target Sender"}
+                </span>
+              </label>
+
+              {senderChannels.length > 0 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px", marginTop: "6px" }}>
+                  {senderChannels.map((chan) => {
+                    const isSelected = selectedChannelId === chan.id;
+                    return (
+                      <div
+                        key={chan.id}
+                        onClick={() => setSelectedChannelId(chan.id)}
+                        style={{
+                          padding: "12px 14px",
+                          borderRadius: "10px",
+                          border: isSelected ? "2px solid var(--accent)" : "1px solid var(--border)",
+                          background: isSelected ? "rgba(37, 99, 235, 0.06)" : "var(--bg-surface)",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            borderRadius: "50%",
+                            border: isSelected ? "5px solid var(--accent)" : "2px solid var(--border)",
+                            background: "#fff",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: "13px", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>{chan.display_phone_number || chan.phone_number_id}</span>
+                            {chan.is_default && (
+                              <span style={{ fontSize: "10px", background: "rgba(16, 185, 129, 0.15)", color: "#059669", padding: "1px 6px", borderRadius: "6px", fontWeight: 600 }}>
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {chan.verified_name || chan.channel_name} (ID: {chan.phone_number_id})
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ padding: "12px 16px", background: "var(--bg-tertiary)", borderRadius: "10px", fontSize: "13px", color: "var(--text-secondary)" }}>
+                  Using Default WhatsApp Channel
+                </div>
+              )}
             </div>
 
             <div className="form-group">

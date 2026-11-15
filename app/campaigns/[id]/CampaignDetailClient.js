@@ -437,6 +437,79 @@ export default function CampaignDetailPage() {
     return { activeErrorCategories, avgReadTimeText, validReadCount };
   }, [campaign, recipients]);
 
+  const senderBreakdown = useMemo(() => {
+    if (!recipients.length && !campaign?.sender_breakdown?.length) {
+      if (campaign?.sender_phone_number) {
+        return [
+          {
+            phone: campaign.sender_phone_number,
+            phoneId: campaign.sender_phone_number_id || "",
+            name: campaign.sender_name || "WhatsApp Channel",
+            total: 0,
+            delivered: 0,
+            read: 0,
+            sent: 0,
+            failed: 0,
+            successful: 0,
+          },
+        ];
+      }
+      return [];
+    }
+
+    if (recipients.length > 0) {
+      const liveMap = new Map();
+      for (const r of recipients) {
+        const key = r.sender_phone_number || campaign?.sender_phone_number || "Default Channel";
+        const entry = liveMap.get(key) || {
+          phone: key,
+          phoneId: r.sender_phone_number_id || campaign?.sender_phone_number_id || "",
+          name: campaign?.sender_name || "WhatsApp Channel",
+          total: 0,
+          delivered: 0,
+          read: 0,
+          sent: 0,
+          failed: 0,
+          successful: 0,
+        };
+        entry.total++;
+        if (r.status === "read") {
+          entry.read++;
+          entry.delivered++;
+          entry.sent++;
+          entry.successful++;
+        } else if (r.status === "delivered") {
+          entry.delivered++;
+          entry.sent++;
+          entry.successful++;
+        } else if (r.status === "sent") {
+          entry.sent++;
+          entry.successful++;
+        } else if (r.status === "failed") {
+          entry.failed++;
+        }
+        liveMap.set(key, entry);
+      }
+      return Array.from(liveMap.values());
+    }
+
+    if (campaign?.sender_breakdown && Array.isArray(campaign.sender_breakdown)) {
+      return campaign.sender_breakdown.map((b) => ({
+        phone: b.sender_phone_number || "Default Channel",
+        phoneId: b.sender_phone_number_id || "",
+        name: b.sender_name || "WhatsApp Channel",
+        total: parseInt(b.total_messages, 10) || 0,
+        delivered: parseInt(b.delivered_count, 10) || 0,
+        read: parseInt(b.read_count, 10) || 0,
+        sent: parseInt(b.sent_count, 10) || 0,
+        failed: parseInt(b.failed_count, 10) || 0,
+        successful: parseInt(b.total_successful, 10) || 0,
+      }));
+    }
+
+    return [];
+  }, [recipients, campaign]);
+
   if (loading) {
     return (
       <div className="page-container">
@@ -756,6 +829,82 @@ export default function CampaignDetailPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Sender Number Breakdown (नंबर अनुसार डिलीवरी रिपोर्ट) */}
+              {senderBreakdown.length > 0 && (
+                <div style={{ background: "#fff", padding: "24px", borderRadius: "12px", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <h3 style={{ fontSize: "16px", fontWeight: "600", margin: 0 }}>Sender Number Breakdown (नंबर अनुसार डिलीवरी रिपोर्ट)</h3>
+                      <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+                        Delivery count and success rate broken down by WhatsApp sender number
+                      </p>
+                    </div>
+                    <span style={{ fontSize: "12px", background: "rgba(37, 99, 235, 0.1)", color: "#2563eb", padding: "4px 10px", borderRadius: "20px", fontWeight: "600" }}>
+                      {senderBreakdown.length} Sender {senderBreakdown.length > 1 ? "Numbers" : "Number"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+                    {senderBreakdown.map((sb, idx) => {
+                      const rate = sb.total > 0 ? Math.round((sb.successful / sb.total) * 100) : 0;
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            border: "1px solid var(--border-color)",
+                            borderRadius: "10px",
+                            padding: "16px",
+                            background: "#fafbfc",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                            <div>
+                              <div style={{ fontWeight: "700", fontSize: "15px", color: "#111" }}>{sb.phone}</div>
+                              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>{sb.name}</div>
+                            </div>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                background: rate >= 80 ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                                color: rate >= 80 ? "#059669" : "#d97706",
+                              }}
+                            >
+                              {rate}% Success
+                            </span>
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", textAlign: "center", marginBottom: "12px" }}>
+                            <div style={{ background: "#fff", padding: "8px", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Total</div>
+                              <div style={{ fontSize: "15px", fontWeight: "700", color: "#111" }}>{sb.total}</div>
+                            </div>
+                            <div style={{ background: "#fff", padding: "8px", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                              <div style={{ fontSize: "11px", color: "#059669" }}>Delivered</div>
+                              <div style={{ fontSize: "15px", fontWeight: "700", color: "#059669" }}>{sb.delivered}</div>
+                            </div>
+                            <div style={{ background: "#fff", padding: "8px", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                              <div style={{ fontSize: "11px", color: "#0284c7" }}>Read</div>
+                              <div style={{ fontSize: "15px", fontWeight: "700", color: "#0284c7" }}>{sb.read}</div>
+                            </div>
+                            <div style={{ background: "#fff", padding: "8px", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                              <div style={{ fontSize: "11px", color: "#dc2626" }}>Failed</div>
+                              <div style={{ fontSize: "15px", fontWeight: "700", color: "#dc2626" }}>{sb.failed}</div>
+                            </div>
+                          </div>
+
+                          <div style={{ width: "100%", height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                            <div style={{ width: `${rate}%`, height: "100%", background: "#10b981", borderRadius: "3px" }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right Column: Template Preview */}
@@ -1041,6 +1190,7 @@ export default function CampaignDetailPage() {
                 <thead style={{ background: "var(--bg-tertiary)", position: "sticky", top: 0, zIndex: 1 }}>
                   <tr>
                     <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase" }}>Recipient</th>
+                    <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase" }}>Sender Number</th>
                     <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase" }}>Status</th>
                     <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase" }}>Reason / Error</th>
                     <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 600, fontSize: "12px", textTransform: "uppercase" }}>Time</th>
@@ -1058,6 +1208,11 @@ export default function CampaignDetailPage() {
                           <td style={{ padding: "14px 20px" }}>
                             <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>{r.name || "Unknown Contact"}</div>
                             <div style={{ color: "var(--text-muted)", fontSize: "12px", marginTop: "2px" }}>+{r.phone_number}</div>
+                          </td>
+                          <td style={{ padding: "14px 20px", fontSize: "12px" }}>
+                            <span style={{ fontWeight: 600, color: "#334155", background: "#f1f5f9", padding: "3px 8px", borderRadius: "6px", display: "inline-block" }}>
+                              {r.sender_phone_number || campaign.sender_phone_number || "Default"}
+                            </span>
                           </td>
                           <td style={{ padding: "14px 20px", fontSize: "13px" }}>
                             {getStatusBadge(r.status, r.error_message)}
@@ -1097,7 +1252,7 @@ export default function CampaignDetailPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ padding: "48px", textAlign: "center", color: "var(--text-muted)" }}>
+                      <td colSpan="6" style={{ padding: "48px", textAlign: "center", color: "var(--text-muted)" }}>
                         No recipients match this filter.
                       </td>
                     </tr>
