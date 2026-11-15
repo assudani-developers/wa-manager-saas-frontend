@@ -425,8 +425,8 @@ export default function CampaignsPage() {
                   </Link>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {/* ONLY show Resume button when campaign is paused and has unsent recipients */}
-                    {campaign.status === "paused" && Number(campaign.total_recipients) > Number(campaign.total_messages) && (
+                    {/* Show Resume button whenever there are unsent recipients AND it is NOT actively running */}
+                    {!campaign.is_running && campaign.status !== "in_progress" && Number(campaign.total_recipients) > Number(campaign.total_messages) && (
                       <Link
                         href={`/campaigns/${campaign.id}`}
                         style={{

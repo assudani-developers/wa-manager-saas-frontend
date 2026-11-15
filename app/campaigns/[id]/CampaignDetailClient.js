@@ -665,8 +665,8 @@ export default function CampaignDetailPage() {
               </button>
             )}
 
-            {/* ONLY show Resume button if campaign is paused and there are unsent contacts */}
-            {campaign?.status === "paused" && Number(campaign?.unsent_count) > 0 && (
+            {/* Show Resume button whenever there are unsent contacts AND campaign is NOT actively running */}
+            {!campaign?.is_running && campaign?.status !== "in_progress" && Number(campaign?.unsent_count) > 0 && (
               <button
                 onClick={handleResumeCampaign}
                 disabled={resuming}
