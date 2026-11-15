@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Megaphone, LayoutTemplate, X, Image as ImageIcon, Video, FileText, FolderOpen, Upload } from "lucide-react";
+import { ArrowLeft, Megaphone, LayoutTemplate, X, Image as ImageIcon, Video, FileText, FolderOpen, Upload, Smartphone } from "lucide-react";
 import api, { normalizeMediaUrl } from "../../lib/api";
 import { useToast } from "../../components/ToastProvider";
 import MediaPickerModal from "../../components/MediaPickerModal";
@@ -23,6 +23,19 @@ export default function NewTemplatePage() {
   const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
   const [bodyText, setBodyText] = useState("");
   const [buttons, setButtons] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [selectedChannelId, setSelectedChannelId] = useState("");
+
+  useEffect(() => {
+    api.get("/api/users/channels")
+      .then((res) => {
+        const chans = res.data?.channels || [];
+        setChannels(chans);
+        const def = chans.find((c) => c.is_default) || chans[0];
+        if (def) setSelectedChannelId(def.id);
+      })
+      .catch((err) => console.warn("Could not load sender channels:", err.message));
+  }, []);
 
   const handleSampleFileChange = (e) => {
     const file = e.target.files[0] || null;
@@ -88,6 +101,9 @@ export default function NewTemplatePage() {
       if (buttons && buttons.length > 0) {
         formData.append("buttons", JSON.stringify(buttons));
       }
+      if (selectedChannelId) {
+        formData.append("sender_channel_id", selectedChannelId);
+      }
       if (sampleFile) {
         formData.append("sampleFile", sampleFile);
       } else if (selectedGalleryMedia) {
@@ -146,6 +162,29 @@ export default function NewTemplatePage() {
             {success && (
               <div style={{ padding: "16px", background: "var(--bubble-outbound)", border: "1px solid var(--secondary-accent-muted)", borderRadius: "12px", marginBottom: "24px", color: "var(--secondary-accent)", fontSize: "15px", fontWeight: "600" }}>
                 ✅ {success}
+              </div>
+            )}
+
+            {channels && channels.length > 0 && (
+              <div className="form-group" style={{ marginBottom: "22px" }}>
+                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Smartphone size={16} style={{ color: "var(--accent)" }} />
+                  WhatsApp Sender Number (Kiske Liye Template Bana Rahe Hain)
+                </label>
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
+                  Yeh template is number ke WhatsApp Business Account (WABA) par register hoga aur is number tatha iske associated channels par broadcast campaigns me use hoga.
+                </p>
+                <select
+                  className="form-select"
+                  value={selectedChannelId}
+                  onChange={(e) => setSelectedChannelId(e.target.value)}
+                >
+                  {channels.map((chan) => (
+                    <option key={chan.id} value={chan.id}>
+                      {chan.display_phone_number} - {chan.verified_name || chan.channel_name} {chan.is_default ? "★ (Default Active)" : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 

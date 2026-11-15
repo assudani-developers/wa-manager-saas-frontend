@@ -128,7 +128,15 @@ export const createCampaign = (formData) =>
 
 
 
-export const getTemplates = () => api.get("/api/templates");
+export const getTemplates = (params) => api.get("/api/templates", { params });
+
+export const deleteTemplate = (name, hsmId = null, channelId = null) =>
+  api.delete(`/api/templates/${encodeURIComponent(name)}`, {
+    params: {
+      ...(hsmId ? { hsm_id: hsmId } : {}),
+      ...(channelId ? { channel_id: channelId } : {}),
+    },
+  });
 
 
 
