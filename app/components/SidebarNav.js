@@ -20,6 +20,7 @@ import {
 import AccountHealthModal from "./AccountHealthModal";
 import BrandLogo from "./BrandLogo";
 import { getSocket } from "../lib/socket";
+import { getMe } from "../lib/api";
 
 export default function SidebarNav() {
   const pathname = usePathname();
@@ -29,7 +30,16 @@ export default function SidebarNav() {
   const [hasNewChat, setHasNewChat] = useState(false);
   const [isCampaignActive, setIsCampaignActive] = useState(false);
   const [hasWalletUpdate, setHasWalletUpdate] = useState(false);
-  const [showBilling, setShowBilling] = useState(true);
+  const [showBilling, setShowBilling] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (user && user.show_billing === false) return false;
+      } catch (e) {}
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (pathname === "/chat") setHasNewChat(false);
@@ -79,7 +89,7 @@ export default function SidebarNav() {
           localStorage.setItem("user", JSON.stringify(user));
           setShowBilling(data.show_billing);
           if (!data.show_billing && pathname === "/billing") {
-            router.push("/dashboard");
+            window.location.replace("/dashboard");
           }
         }
       } catch (e) {}
@@ -99,18 +109,74 @@ export default function SidebarNav() {
   }, [pathname, router]);
 
   useEffect(() => {
-    try {
-      const role = localStorage.getItem("user_role");
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? JSON.parse(userStr) : null;
-      const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
-      setIsMasterAdmin(isMaster);
-      if (!isMaster) {
-        setShowBilling(user?.show_billing !== false);
-      } else {
-        setShowBilling(true);
-      }
-    } catch (e) { }
+    const syncUser = async () => {
+      try {
+        const role = localStorage.getItem("user_role");
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
+        setIsMasterAdmin(isMaster);
+
+        if (!isMaster) {
+          if (user && user.show_billing === false) {
+            setShowBilling(false);
+            if (pathname === "/billing") {
+              window.location.replace("/dashboard");
+            }
+          }
+        } else {
+          setShowBilling(true);
+        }
+
+        // Live sync with backend
+        const token = localStorage.getItem("token");
+        if (token) {
+          const res = await getMe();
+          if (res.data?.user) {
+            const freshUser = res.data.user;
+            const freshIsMaster = freshUser.role === "master_admin" || freshUser.username?.toLowerCase() === "piyushassudani";
+            setIsMasterAdmin(freshIsMaster);
+            if (!freshIsMaster) {
+              const isVisible = freshUser.show_billing !== false;
+              setShowBilling(isVisible);
+              if (userStr) {
+                const updated = { ...user, show_billing: isVisible };
+                localStorage.setItem("user", JSON.stringify(updated));
+              }
+              if (!isVisible && pathname === "/billing") {
+                window.location.replace("/dashboard");
+              }
+            } else {
+              setShowBilling(true);
+            }
+          }
+        }
+      } catch (e) {}
+    };
+
+    syncUser();
+
+    const handleStorage = () => {
+      try {
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const role = localStorage.getItem("user_role");
+        const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
+        if (!isMaster && user && user.show_billing === false) {
+          setShowBilling(false);
+          if (pathname === "/billing") {
+            window.location.replace("/dashboard");
+          }
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("billing_visibility_update", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("billing_visibility_update", handleStorage);
+    };
   }, [pathname]);
 
   if (pathname === "/login") {

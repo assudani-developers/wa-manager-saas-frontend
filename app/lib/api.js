@@ -53,6 +53,8 @@ export const assignContact = (contactId, userId) => api.put(`/api/contacts/${con
 
 export const getAccountHealth = () => api.get("/api/account-health");
 
+export const getMe = () => api.get("/api/users/me");
+
 export const getContactLists = () => api.get("/api/contact_lists");
 
 // Client Team Members / Sub-logins

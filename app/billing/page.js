@@ -28,6 +28,7 @@ import {
   rechargeClientWallet,
   getClientsDropdown,
   getAdminBillingClients,
+  getMe,
 } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { useToast } from "../components/ToastProvider";
@@ -47,6 +48,7 @@ export default function BillingPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
 
+  const [isBlocked, setIsBlocked] = useState(false);
   const [summary, setSummary] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -81,10 +83,29 @@ export default function BillingPage() {
         user?.username?.toLowerCase() === "piyushassudani";
       setIsMasterAdmin(isMaster);
 
-      if (!isMaster && user && user.show_billing === false) {
-        showError("Billing dashboard is disabled for this account.");
-        router.push("/dashboard");
-        return;
+      if (!isMaster) {
+        if (user && user.show_billing === false) {
+          setIsBlocked(true);
+          window.location.replace("/dashboard");
+          return;
+        }
+
+        getMe()
+          .then((res) => {
+            if (res.data?.user) {
+              const u = res.data.user;
+              const isUserMaster = u.role === "master_admin" || u.username?.toLowerCase() === "piyushassudani";
+              if (!isUserMaster && u.show_billing === false) {
+                setIsBlocked(true);
+                const updated = { ...user, show_billing: false };
+                localStorage.setItem("user", JSON.stringify(updated));
+                window.dispatchEvent(new Event("storage"));
+                window.dispatchEvent(new Event("billing_visibility_update"));
+                window.location.replace("/dashboard");
+              }
+            }
+          })
+          .catch(() => {});
       }
 
       if (isMaster) {
@@ -143,6 +164,21 @@ export default function BillingPage() {
       }
     } catch (err) {
       console.error("Failed to load billing:", err);
+      if (err.response?.status === 403) {
+        setIsBlocked(true);
+        try {
+          const userStr = localStorage.getItem("user");
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            user.show_billing = false;
+            localStorage.setItem("user", JSON.stringify(user));
+            window.dispatchEvent(new Event("storage"));
+            window.dispatchEvent(new Event("billing_visibility_update"));
+          }
+        } catch (e) {}
+        window.location.replace("/dashboard");
+        return;
+      }
       showError(err.response?.data?.error || "Failed to load billing data.");
     } finally {
       setLoading(false);
@@ -243,6 +279,10 @@ export default function BillingPage() {
         return { label: "Service / Chat", bg: "rgba(16, 185, 129, 0.1)", color: "#059669", border: "rgba(16, 185, 129, 0.25)" };
     }
   };
+
+  if (isBlocked) {
+    return null;
+  }
 
   return (
     <div className="page-container" style={{ paddingBottom: "40px" }}>
