@@ -70,6 +70,7 @@ export const createUser = (data) => api.post("/api/users", data);
 export const updateUser = (id, data) => api.put(`/api/users/${id}`, data);
 
 export const deleteUser = (id) => api.delete(`/api/users/${id}`);
+export const toggleUserBillingVisibility = (id, show_billing) => api.patch(`/api/users/${id}/billing-visibility`, { show_billing });
 
 export const getChannelConfig = () => api.get("/api/users/channel-config");
 

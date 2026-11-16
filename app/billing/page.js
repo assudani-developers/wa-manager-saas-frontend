@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Wallet,
   TrendingDown,
@@ -43,6 +44,7 @@ const formatCurrency = (val) => {
 };
 
 export default function BillingPage() {
+  const router = useRouter();
   const { showSuccess, showError } = useToast();
 
   const [summary, setSummary] = useState(null);
@@ -78,6 +80,12 @@ export default function BillingPage() {
         user?.role === "master_admin" ||
         user?.username?.toLowerCase() === "piyushassudani";
       setIsMasterAdmin(isMaster);
+
+      if (!isMaster && user && user.show_billing === false) {
+        showError("Billing dashboard is disabled for this account.");
+        router.push("/dashboard");
+        return;
+      }
 
       if (isMaster) {
         getClientsDropdown()
@@ -159,16 +167,29 @@ export default function BillingPage() {
       }
     };
 
+    const handleVisibility = (data) => {
+      try {
+        const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (user && user.id === data.user_id && !data.show_billing) {
+          showError("Billing dashboard access has been disabled by administrator.");
+          router.push("/dashboard");
+        }
+      } catch (e) {}
+    };
+
     socket.on("wallet_updated", handleUpdate);
     socket.on("new_message", handleUpdate);
     socket.on("campaign_progress", handleUpdate);
+    socket.on("billing_visibility_changed", handleVisibility);
 
     return () => {
       socket.off("wallet_updated", handleUpdate);
       socket.off("new_message", handleUpdate);
       socket.off("campaign_progress", handleUpdate);
+      socket.off("billing_visibility_changed", handleVisibility);
     };
-  }, [loadBillingData, isMasterAdmin]);
+  }, [loadBillingData, isMasterAdmin, router, showError]);
 
   const handleRechargeSubmit = async (e) => {
     e.preventDefault();

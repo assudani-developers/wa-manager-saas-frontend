@@ -29,6 +29,7 @@ export default function SidebarNav() {
   const [hasNewChat, setHasNewChat] = useState(false);
   const [isCampaignActive, setIsCampaignActive] = useState(false);
   const [hasWalletUpdate, setHasWalletUpdate] = useState(false);
+  const [showBilling, setShowBilling] = useState(true);
 
   useEffect(() => {
     if (pathname === "/chat") setHasNewChat(false);
@@ -69,16 +70,33 @@ export default function SidebarNav() {
       setTimeout(() => setHasWalletUpdate(false), 5000);
     };
 
+    const handleBillingVisibility = (data) => {
+      try {
+        const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (user && (user.id === data.user_id || data.user_id === "*")) {
+          user.show_billing = data.show_billing;
+          localStorage.setItem("user", JSON.stringify(user));
+          setShowBilling(data.show_billing);
+          if (!data.show_billing && pathname === "/billing") {
+            router.push("/dashboard");
+          }
+        }
+      } catch (e) {}
+    };
+
     socket.on("new_message", handleNewMessage);
     socket.on("campaign_progress", handleCampaign);
     socket.on("wallet_updated", handleWallet);
+    socket.on("billing_visibility_changed", handleBillingVisibility);
 
     return () => {
       socket.off("new_message", handleNewMessage);
       socket.off("campaign_progress", handleCampaign);
       socket.off("wallet_updated", handleWallet);
+      socket.off("billing_visibility_changed", handleBillingVisibility);
     };
-  }, [pathname]);
+  }, [pathname, router]);
 
   useEffect(() => {
     try {
@@ -87,6 +105,11 @@ export default function SidebarNav() {
       const user = userStr ? JSON.parse(userStr) : null;
       const isMaster = role === "master_admin" || user?.role === "master_admin" || user?.username?.toLowerCase() === "piyushassudani";
       setIsMasterAdmin(isMaster);
+      if (!isMaster) {
+        setShowBilling(user?.show_billing !== false);
+      } else {
+        setShowBilling(true);
+      }
     } catch (e) { }
   }, [pathname]);
 
@@ -98,7 +121,7 @@ export default function SidebarNav() {
     ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "Client Accounts" }] : []),
     { href: "/chat", icon: MessageCircle, label: "Live Chat" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Analytics" },
-    { href: "/billing", icon: Wallet, label: "Message Funds & Billing" },
+    ...(isMasterAdmin || showBilling ? [{ href: "/billing", icon: Wallet, label: "Message Funds & Billing" }] : []),
     // { href: "/replies", icon: Reply, label: "All Replies" }, // Hidden per request (code preserved)
     { href: "/contacts", icon: Users, label: "Contact Lists" },
     { href: "/campaigns", icon: Megaphone, label: "Campaigns" },
@@ -109,7 +132,7 @@ export default function SidebarNav() {
   const mobileNavItems = [
     ...(isMasterAdmin ? [{ href: "/users", icon: ShieldCheck, label: "Clients" }] : []),
     { href: "/chat", icon: MessageCircle, label: "Chat" },
-    { href: "/billing", icon: Wallet, label: "Billing" },
+    ...(isMasterAdmin || showBilling ? [{ href: "/billing", icon: Wallet, label: "Billing" }] : []),
     { href: "/dashboard", icon: LayoutDashboard, label: "Stats" },
     { href: "/contacts", icon: Users, label: "Contacts" },
     { href: "/campaigns", icon: Megaphone, label: "Campaigns" },

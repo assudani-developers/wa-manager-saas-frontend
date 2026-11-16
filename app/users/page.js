@@ -28,8 +28,9 @@ import {
   ArrowRight,
   UserCheck,
   Copy,
+  Wallet,
 } from "lucide-react";
-import api, { getUsers, createUser, updateUser, deleteUser, testMetaCredentials } from "../lib/api";
+import api, { getUsers, createUser, updateUser, deleteUser, testMetaCredentials, toggleUserBillingVisibility } from "../lib/api";
 import { useToast } from "../components/ToastProvider";
 
 export default function UsersManagementPage() {
@@ -64,7 +65,29 @@ export default function UsersManagementPage() {
     meta_phone_number_id: "",
     meta_waba_id: "",
     meta_access_token: "",
+    show_billing: true,
   });
+
+  const [togglingBilling, setTogglingBilling] = useState({});
+
+  const handleToggleBillingVisibility = async (user) => {
+    const nextVal = user.show_billing === false ? true : false;
+    setTogglingBilling((prev) => ({ ...prev, [user.id]: true }));
+    try {
+      await toggleUserBillingVisibility(user.id, nextVal);
+      setUsersList((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, show_billing: nextVal } : u))
+      );
+      showSuccess(
+        `Billing dashboard ${nextVal ? "enabled" : "hidden"} for "${user.username}" in real-time.`
+      );
+    } catch (err) {
+      console.error("Toggle billing error:", err);
+      showError(err.response?.data?.error || "Failed to update billing visibility.");
+    } finally {
+      setTogglingBilling((prev) => ({ ...prev, [user.id]: false }));
+    }
+  };
 
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
@@ -126,6 +149,7 @@ export default function UsersManagementPage() {
       meta_phone_number_id: "",
       meta_waba_id: "",
       meta_access_token: "",
+      show_billing: true,
     });
     setShowPassword(false);
     setShowEditPassword(false);
@@ -149,6 +173,7 @@ export default function UsersManagementPage() {
       meta_phone_number_id: user.meta_phone_number_id || "",
       meta_waba_id: user.meta_waba_id || "",
       meta_access_token: user.meta_access_token || "",
+      show_billing: user.show_billing !== false,
     });
     setShowEditPassword(false);
     setMetaTestResult(null);
@@ -241,6 +266,7 @@ export default function UsersManagementPage() {
         whatsapp_mode: formData.whatsapp_mode,
         meta_phone_number_id: formData.meta_phone_number_id ? formData.meta_phone_number_id.trim() : null,
         meta_waba_id: formData.meta_waba_id ? formData.meta_waba_id.trim() : null,
+        show_billing: formData.show_billing,
       };
 
       if (formData.password.trim()) {
@@ -683,6 +709,9 @@ export default function UsersManagementPage() {
                 <th style={{ padding: "14px 18px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Status
                 </th>
+                <th style={{ padding: "14px 18px", textAlign: "left", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Billing Dashboard
+                </th>
                 <th style={{ padding: "14px 20px", textAlign: "right", color: "#64748b", fontWeight: 700, fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Actions
                 </th>
@@ -691,14 +720,14 @@ export default function UsersManagementPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: "50px", textAlign: "center", color: "#64748b" }}>
+                  <td colSpan={7} style={{ padding: "50px", textAlign: "center", color: "#64748b" }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: "0 auto 10px", color: "#002277" }} />
                     <div style={{ fontWeight: 600 }}>Loading SaaS accounts...</div>
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: "60px 20px", textAlign: "center" }}>
+                  <td colSpan={7} style={{ padding: "60px 20px", textAlign: "center" }}>
                     <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", color: "#94a3b8" }}>
                       <Users size={22} />
                     </div>
@@ -957,6 +986,52 @@ export default function UsersManagementPage() {
                           />
                           Active
                         </span>
+                      </td>
+
+                      {/* Billing Dashboard Access */}
+                      <td style={{ padding: "16px 18px" }}>
+                        {isMaster ? (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              fontSize: "12px",
+                              color: "#64748b",
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Shield size={13} color="#7c3aed" /> Always Visible
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBillingVisibility(user)}
+                            disabled={togglingBilling[user.id]}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "5px 12px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: togglingBilling[user.id] ? "not-allowed" : "pointer",
+                              transition: "all 0.15s ease",
+                              border: user.show_billing !== false
+                                ? "1px solid rgba(16, 185, 129, 0.35)"
+                                : "1px solid rgba(239, 68, 68, 0.35)",
+                              background: user.show_billing !== false
+                                ? "rgba(16, 185, 129, 0.1)"
+                                : "rgba(239, 68, 68, 0.1)",
+                              color: user.show_billing !== false ? "#059669" : "#dc2626",
+                            }}
+                            title={user.show_billing !== false ? "Click to hide billing dashboard from this client" : "Click to show billing dashboard to this client"}
+                          >
+                            <Wallet size={13} />
+                            <span>{user.show_billing !== false ? "Visible (Active)" : "Hidden (Disabled)"}</span>
+                          </button>
+                        )}
                       </td>
 
                       {/* Actions */}
@@ -1286,6 +1361,55 @@ export default function UsersManagementPage() {
                   </div>
                 </div>
               )}
+
+              {/* Billing Dashboard Access Toggle */}
+              <div style={{ marginBottom: "18px", padding: "14px 16px", background: formData.show_billing ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)", borderRadius: "10px", border: `1px solid ${formData.show_billing ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.25)"}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: formData.show_billing ? "#059669" : "#dc2626", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Wallet size={15} />
+                      Client Billing Dashboard Access
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                      {formData.show_billing ? "Client can view message funds, wallet balance & rates." : "Billing tab and rates will be completely hidden from this client."}
+                    </div>
+                  </div>
+                  <label style={{ position: "relative", display: "inline-block", width: "42px", height: "24px", cursor: "pointer", margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.show_billing}
+                      onChange={(e) => setFormData({ ...formData, show_billing: e.target.checked })}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: formData.show_billing ? "#10b981" : "#cbd5e1",
+                        transition: "0.2s",
+                        borderRadius: "24px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          height: "18px",
+                          width: "18px",
+                          left: formData.show_billing ? "21px" : "3px",
+                          bottom: "3px",
+                          backgroundColor: "white",
+                          transition: "0.2s",
+                          borderRadius: "50%",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                        }}
+                      />
+                    </span>
+                  </label>
+                </div>
+              </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
                 <button
@@ -1689,6 +1813,57 @@ export default function UsersManagementPage() {
                         style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", resize: "none", background: "#ffffff" }}
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Billing Dashboard Access Toggle */}
+              {editingUser.role !== "master_admin" && (
+                <div style={{ marginBottom: "18px", padding: "14px 16px", background: formData.show_billing ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)", borderRadius: "10px", border: `1px solid ${formData.show_billing ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.25)"}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: formData.show_billing ? "#059669" : "#dc2626", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Wallet size={15} />
+                        Client Billing Dashboard Access
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                        {formData.show_billing ? "Client can view message funds, wallet balance & rates." : "Billing tab and rates will be completely hidden from this client."}
+                      </div>
+                    </div>
+                    <label style={{ position: "relative", display: "inline-block", width: "42px", height: "24px", cursor: "pointer", margin: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.show_billing}
+                        onChange={(e) => setFormData({ ...formData, show_billing: e.target.checked })}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: formData.show_billing ? "#10b981" : "#cbd5e1",
+                          transition: "0.2s",
+                          borderRadius: "24px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: "absolute",
+                            height: "18px",
+                            width: "18px",
+                            left: formData.show_billing ? "21px" : "3px",
+                            bottom: "3px",
+                            backgroundColor: "white",
+                            transition: "0.2s",
+                            borderRadius: "50%",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                          }}
+                        />
+                      </span>
+                    </label>
                   </div>
                 </div>
               )}
