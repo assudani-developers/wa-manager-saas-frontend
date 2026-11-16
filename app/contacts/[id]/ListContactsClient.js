@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Phone, MapPin, Plus, Trash2, X, Edit, AlertCircle, MessageSquare } from "lucide-react";
-import { getListContacts, deleteContact, addContactToList, updateContact } from "../../lib/api";
+import { ArrowLeft, Users, Phone, MapPin, Plus, Trash2, X, Edit, AlertCircle, MessageSquare, UserX, Search } from "lucide-react";
+import { getListContacts, deleteContact, addContactToList, updateContact, deleteNotOnWaContacts } from "../../lib/api";
 import { useToast } from "../../components/ToastProvider";
 
 export default function ListContactsPage() {
@@ -26,6 +26,10 @@ export default function ListContactsPage() {
   const [editPhone, setEditPhone] = useState("");
   const [editCity, setEditCity] = useState("");
   const [editing, setEditing] = useState(false);
+
+  const [deletingNotOnWa, setDeletingNotOnWa] = useState(false);
+  const [filterType, setFilterType] = useState("all"); // "all" | "not_on_wa" | "valid"
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchContacts();
@@ -101,9 +105,51 @@ export default function ListContactsPage() {
     }
   };
 
+  const notOnWaContacts = contacts.filter((c) => c.not_on_wp);
+  const notOnWaCount = notOnWaContacts.length;
+
+  const handleDeleteNotOnWa = async () => {
+    if (notOnWaCount === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete all ${notOnWaCount} contacts marked as "Not on WhatsApp" from this list? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingNotOnWa(true);
+    try {
+      const res = await deleteNotOnWaContacts(id);
+      showSuccess(res.data?.message || `Successfully removed ${notOnWaCount} 'Not on WhatsApp' contacts!`);
+      setContacts((prev) => prev.filter((c) => !c.not_on_wp));
+      if (filterType === "not_on_wa") {
+        setFilterType("all");
+      }
+    } catch (err) {
+      console.error(err);
+      showError(err.response?.data?.error || "Failed to delete 'Not on WA' contacts");
+    } finally {
+      setDeletingNotOnWa(false);
+    }
+  };
+
+  const filteredContacts = contacts.filter((c) => {
+    if (filterType === "not_on_wa" && !c.not_on_wp) return false;
+    if (filterType === "valid" && c.not_on_wp) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const name = (c.name || "").toLowerCase();
+      const phone = String(c.phone_number || "");
+      const city = (c.city || "").toLowerCase();
+      return name.includes(q) || phone.includes(q) || city.includes(q);
+    }
+    return true;
+  });
+
   return (
     <div className="page-container">
-      <div className="page-header">
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <Link href="/contacts" className="btn-secondary" style={{ padding: "10px" }}>
             <ArrowLeft size={20} />
@@ -111,20 +157,142 @@ export default function ListContactsPage() {
           <div>
             <h1 className="page-title">List Members</h1>
             <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
-              Total: {contacts.length} members
+              Total: <strong style={{ color: "var(--text-primary)" }}>{contacts.length}</strong> members
+              {notOnWaCount > 0 && (
+                <span style={{ marginLeft: "10px", color: "#ef4444", fontWeight: "600" }}>
+                  • {notOnWaCount} Not on WA
+                </span>
+              )}
             </p>
           </div>
         </div>
-        <button className="btn-primary" onClick={() => setShowAddModal(true)}>
-          <Plus size={18} />
-          Add Contact
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {notOnWaCount > 0 && (
+            <button
+              onClick={handleDeleteNotOnWa}
+              disabled={deletingNotOnWa}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "rgba(239, 68, 68, 0.12)",
+                color: "#ef4444",
+                border: "1px solid rgba(239, 68, 68, 0.35)",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: deletingNotOnWa ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Delete all contacts not registered on WhatsApp from this list"
+            >
+              <Trash2 size={16} />
+              {deletingNotOnWa ? "Deleting..." : `Delete Not on WA (${notOnWaCount})`}
+            </button>
+          )}
+          <button className="btn-primary" onClick={() => setShowAddModal(true)}>
+            <Plus size={18} />
+            Add Contact
+          </button>
+        </div>
       </div>
 
       <div className="page-content">
         {error && (
           <div style={{ background: "rgba(255, 0, 0, 0.1)", color: "red", padding: "12px", borderRadius: "8px", marginBottom: "20px" }}>
             {error}
+          </div>
+        )}
+
+        {/* Filter Toolbar */}
+        {!loading && contacts.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "16px",
+              flexWrap: "wrap",
+              gap: "12px",
+            }}
+          >
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setFilterType("all")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "20px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  border: filterType === "all" ? "1px solid #2563eb" : "1px solid var(--border-color)",
+                  background: filterType === "all" ? "#2563eb" : "var(--bg-secondary)",
+                  color: filterType === "all" ? "#fff" : "var(--text-secondary)",
+                  cursor: "pointer",
+                }}
+              >
+                All ({contacts.length})
+              </button>
+              {notOnWaCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilterType("not_on_wa")}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "20px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    border: "1px solid rgba(239, 68, 68, 0.35)",
+                    background: filterType === "not_on_wa" ? "#ef4444" : "rgba(239, 68, 68, 0.08)",
+                    color: filterType === "not_on_wa" ? "#fff" : "#ef4444",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <AlertCircle size={14} />
+                  Not on WA ({notOnWaCount})
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setFilterType("valid")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "20px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  border: filterType === "valid" ? "1px solid #10b981" : "1px solid var(--border-color)",
+                  background: filterType === "valid" ? "#10b981" : "var(--bg-secondary)",
+                  color: filterType === "valid" ? "#fff" : "var(--text-secondary)",
+                  cursor: "pointer",
+                }}
+              >
+                Valid Contacts ({contacts.length - notOnWaCount})
+              </button>
+            </div>
+
+            <div style={{ position: "relative", minWidth: "220px" }}>
+              <Search size={15} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+              <input
+                type="text"
+                placeholder="Search name or number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  padding: "7px 12px 7px 32px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-color)",
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-primary)",
+                  fontSize: "13px",
+                  width: "100%",
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -135,6 +303,10 @@ export default function ListContactsPage() {
         ) : contacts.length === 0 ? (
           <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", background: "var(--bg-tertiary)", borderRadius: "12px" }}>
             No contacts found in this list.
+          </div>
+        ) : filteredContacts.length === 0 ? (
+          <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", background: "var(--bg-tertiary)", borderRadius: "12px" }}>
+            No contacts match the current filter or search query.
           </div>
         ) : (
           <div className="ui-card table-responsive" style={{ padding: "0", overflowX: "auto", width: "100%" }}>
@@ -149,7 +321,7 @@ export default function ListContactsPage() {
                 </tr>
               </thead>
               <tbody>
-                {contacts.map((c) => (
+                {filteredContacts.map((c) => (
                   <tr key={c.id} style={{ borderBottom: "1px solid var(--border-color)" }}>
                     <td style={{ padding: "16px 20px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

@@ -158,6 +158,7 @@ export const deleteContact = (id) => api.delete(`/api/contacts/${id}`);
 export const deleteCampaign = (id) => api.delete(`/api/campaigns/${id}`);
 export const addContactToList = (listId, contactData) => api.post(`/api/contact_lists/${listId}/contacts`, contactData);
 export const deleteContactList = (id) => api.delete(`/api/contact_lists/${id}`);
+export const deleteNotOnWaContacts = (listId) => api.delete(`/api/contact_lists/${listId}/not-on-whatsapp`);
 
 // Billing & Wallet API
 export const getBillingSummary = (params) => api.get("/api/billing/summary", { params });
