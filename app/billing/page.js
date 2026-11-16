@@ -31,6 +31,17 @@ import {
 import { getSocket } from "../lib/socket";
 import { useToast } from "../components/ToastProvider";
 
+const formatCurrency = (val) => {
+  const num = parseFloat(val || 0);
+  if (isNaN(num)) return "0.00";
+  const str = num.toFixed(4);
+  const trimmed = str.replace(/0+$/, "").replace(/\.$/, ".00");
+  if (!trimmed.includes(".")) return `${trimmed}.00`;
+  const decimals = trimmed.split(".")[1];
+  if (decimals.length === 1) return `${trimmed}0`;
+  return trimmed;
+};
+
 export default function BillingPage() {
   const { showSuccess, showError } = useToast();
 
@@ -349,7 +360,7 @@ export default function BillingPage() {
           </div>
 
           <div style={{ fontSize: "32px", fontWeight: 800, margin: "6px 0", letterSpacing: "-0.5px" }}>
-            ₹{(summary?.wallet_balance !== undefined ? summary.wallet_balance : 0).toFixed(2)}
+            ₹{formatCurrency(summary?.wallet_balance)}
           </div>
 
           <p style={{ margin: 0, fontSize: "12px", opacity: 0.8, lineHeight: 1.4 }}>
@@ -374,7 +385,7 @@ export default function BillingPage() {
             </span>
           </div>
           <div style={{ fontSize: "28px", fontWeight: 800, color: "#090d16", margin: "6px 0" }}>
-            ₹{(summary?.total_spent || 0).toFixed(2)}
+            ₹{formatCurrency(summary?.total_spent)}
           </div>
           <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
             Total message deductions logged across all successful sends
@@ -453,10 +464,10 @@ export default function BillingPage() {
                       </span>
                     </td>
                     <td style={{ padding: "12px", textAlign: "right", fontWeight: 800, color: "#059669", fontSize: "14px" }}>
-                      ₹{parseFloat(cl.wallet_balance || 0).toFixed(2)}
+                      ₹{formatCurrency(cl.wallet_balance)}
                     </td>
                     <td style={{ padding: "12px", textAlign: "right", fontWeight: 600, color: "#64748b" }}>
-                      ₹{parseFloat(cl.total_spent || 0).toFixed(2)}
+                      ₹{formatCurrency(cl.total_spent)}
                     </td>
                     <td style={{ padding: "12px", textAlign: "center", fontWeight: 600, color: "#0f172a" }}>
                       {cl.total_messages || 0}
@@ -726,13 +737,13 @@ export default function BillingPage() {
                             color: isDebit ? "#ef4444" : "#059669",
                           }}
                         >
-                          {isDebit ? `-₹${parseFloat(tx.amount).toFixed(2)}` : `+₹${parseFloat(tx.amount).toFixed(2)}`}
+                          {isDebit ? `-₹${formatCurrency(tx.amount)}` : `+₹${formatCurrency(tx.amount)}`}
                         </span>
                       </td>
 
                       {/* Balance After */}
                       <td style={{ padding: "12px", textAlign: "right", whiteSpace: "nowrap", fontWeight: 600, color: "#0f172a" }}>
-                        ₹{parseFloat(tx.balance_after || 0).toFixed(2)}
+                        ₹{formatCurrency(tx.balance_after)}
                       </td>
 
                       {/* Status */}
